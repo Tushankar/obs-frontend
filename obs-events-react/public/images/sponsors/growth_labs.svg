@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 72" width="160" height="72">
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <g>
+    <!-- Icon -->
+    <g transform="translate(8, 16) scale(1.35)">
+      <path d="M11 6 H19 V9 L24 20 A3 3 0 0 1 21 24 H9 A3 3 0 0 1 6 20 L11 9 Z" fill="#0891B2" />
+    </g>
+    <!-- Text -->
+    <text x="54" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="17.5" font-weight="900" fill="#1A202C" letter-spacing="-0.3">GROWTH</text>
+    <text x="54" y="51" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="800" fill="#718096" letter-spacing="1.5">LABS</text>
+  </g>
+</svg>

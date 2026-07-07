@@ -66,6 +66,7 @@ export default function Header({ onOpenAuth }) {
   const acctMenu = [
     ['My tickets', '/account/tickets'],
     ['Order history', '/account/orders'],
+    ['My chapters', '/account/chapters'],
     ['Profile', '/account'],
   ];
 
@@ -191,6 +192,7 @@ export default function Header({ onOpenAuth }) {
             <button onClick={() => navigate('/organizers/obs-india-chapter')} className="hover:text-brand transition py-2 font-medium">Organizers</button>
           </div>
           <div className="flex gap-6 text-[13px] text-ink-soft">
+            <button onClick={() => navigate('/chapters/create')} className="hover:text-brand transition py-2 font-semibold text-[#C99E25]">＋ Create chapter</button>
             <button onClick={() => navigate('/list-your-event')} className="hover:text-brand transition py-2 font-medium">List your event</button>
             <button onClick={() => navigate('/about')} className="hover:text-brand transition py-2 font-medium">About</button>
             <button onClick={() => navigate('/faqs')} className="hover:text-brand transition py-2 font-medium">FAQs</button>

@@ -10,6 +10,7 @@ export default {
           dark: '#8E6B1D', // hover gold
           soft: '#FAF4E3', // tint / chip bg
           light: '#E5C060', // gradient start
+          red: '#F84464', // BookMyShow style brand red
         },
         ink: {
           DEFAULT: '#333333', // headings

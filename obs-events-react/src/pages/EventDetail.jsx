@@ -5,7 +5,8 @@ import EventGrid from '../components/common/EventGrid';
 import BookingPanel from '../components/booking/BookingPanel';
 import { Icon } from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
-import { getEventBySlug, getEvents, ORGANIZERS, formatPrice, slugify, paletteFor, initials } from '../data/events';
+import { ORGANIZERS, formatPrice, slugify, paletteFor, initials } from '../data/events';
+import eventsJson from '../mock/events.json';
 
 const GOOD_TO_KNOW = [
   'E-tickets are delivered instantly and scanned at the door — no printing needed.',
@@ -17,7 +18,7 @@ export default function EventDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { pushToast } = useApp();
-  const event = getEventBySlug(slug);
+  const event = eventsJson.find((e) => e.slug === slug);
 
   const [qty, setQty] = useState({});
   const [promo, setPromo] = useState({ value: '', ok: false, err: false });
@@ -31,7 +32,7 @@ export default function EventDetail() {
   }
 
   const orgName = ORGANIZERS[event.id % 10];
-  const alsoLike = getEvents().filter((e) => e.cat === event.cat && e.id !== event.id).slice(0, 4);
+  const alsoLike = eventsJson.filter((e) => e.cat === event.cat && e.id !== event.id).slice(0, 4);
   const minPrice = Math.min(...event.types.filter((t) => !t.soldOut).map((t) => t.price));
   const [oc1, oc2] = paletteFor(event.id % 10 + 3);
 
@@ -83,6 +84,24 @@ export default function EventDetail() {
               <span className="mt-0.5 block text-[13px] text-ink-mute">View organizer profile ›</span>
             </span>
           </button>
+
+          {event.sponsors && event.sponsors.length > 0 && (
+            <>
+              <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Event Sponsors</h2>
+              <div className="rounded-xl border border-line p-5 bg-white shadow-sm">
+                <div className="flex flex-wrap gap-5 items-center">
+                  {event.sponsors.map((sp, idx) => (
+                    <div key={idx} className="flex flex-col items-center">
+                      <div className="h-16 w-36 bg-white rounded-lg flex items-center justify-center p-1.5 border border-line hover:border-brand transition shadow-sm">
+                        <img src={sp.logoUrl} alt={sp.name} className="max-h-full max-w-full object-contain filter grayscale hover:grayscale-0 transition duration-200" />
+                      </div>
+                      <span className="text-[9px] text-ink-mute mt-1 font-bold uppercase tracking-wider">{sp.tier}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <h2 className="mb-4 mt-8 text-lg font-bold text-ink">You may also like</h2>
           <EventGrid events={alsoLike} />

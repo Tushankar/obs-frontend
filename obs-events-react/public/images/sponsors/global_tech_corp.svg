@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 108" width="240" height="108">
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <g>
+    <!-- Icon -->
+    <g transform="translate(12, 24) scale(1.7)">
+      <circle cx="15" cy="15" r="10" stroke="#1E40AF" stroke-width="2" fill="none" />
+              <path d="M5 15 H25 M15 5 A10 10 0 0 0 15 25 A10 10 0 0 0 15 5" stroke="#1E40AF" stroke-width="1.5" fill="none" />
+    </g>
+    <!-- Text -->
+    <text x="80" y="56" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="900" fill="#1A202C" letter-spacing="-0.3">GLOBAL</text>
+    <text x="80" y="74" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="800" fill="#718096" letter-spacing="1.5">TECH CORP</text>
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 72" width="160" height="72">
+  <rect width="100%" height="100%" fill="#FFFFFF" />
+  <g>
+    <!-- Icon -->
+    <g transform="translate(8, 16) scale(1.35)">
+      <path d="M15 5 L5 23 H25 Z" stroke="#15803D" stroke-width="3" fill="none" />
+    </g>
+    <!-- Text -->
+    <text x="54" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="17.5" font-weight="900" fill="#1A202C" letter-spacing="-0.3">DELTA</text>
+    <text x="54" y="51" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="800" fill="#718096" letter-spacing="1.5">SOLUTIONS</text>
+  </g>
+</svg>

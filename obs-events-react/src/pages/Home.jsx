@@ -6,6 +6,14 @@ import CategoryTiles from '../components/home/CategoryTiles';
 import { SkeletonRail } from '../components/common/Skeleton';
 import { getEvents } from '../data/events';
 
+// New Sections
+import ChapterHighlightBand from '../components/home/ChapterHighlightBand';
+import ProgramBanner from '../components/home/ProgramBanner';
+import SpeakersRail from '../components/home/SpeakersRail';
+import LaunchesRail from '../components/home/LaunchesRail';
+import SponsorsStrip from '../components/home/SponsorsStrip';
+import NewsRail from '../components/home/NewsRail';
+
 export default function Home() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -46,12 +54,30 @@ export default function Home() {
   }
 
   return (
-    <div className="pb-4 bg-[#F5F5F5]">
+    <div className="pb-8 bg-[#F5F5F5]">
       <HeroCarousel slides={slides} />
+
+      {/* A. Chapter highlight band */}
+      <ChapterHighlightBand />
 
       <EventRail title="Recommended events" events={recommended} seeAllTo="/events" />
       <CategoryTiles />
       <EventRail title="Happening this weekend" events={weekend} seeAllTo="/events" />
+
+      {/* B. 100 Days Program banner */}
+      <ProgramBanner />
+
+      {/* C. Featured speakers rail */}
+      <SpeakersRail />
+
+      {/* D. Launches rail */}
+      <LaunchesRail />
+
+      {/* E. Sponsors strip */}
+      <SponsorsStrip />
+
+      {/* F. From the newsroom rail */}
+      <NewsRail />
 
       {/* CTA band */}
       <section className="mx-auto max-w-container px-4 pt-8 sm:px-6">

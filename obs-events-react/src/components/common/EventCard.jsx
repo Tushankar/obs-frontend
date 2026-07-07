@@ -1,14 +1,39 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EvImage from './EvImage';
 import { formatPrice } from '../../data/events';
 
+function getCountdown(dateStr) {
+  const diff = new Date(dateStr) - new Date();
+  if (diff <= 0) return '';
+  const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const m = Math.floor((diff / (1000 * 60)) % 60);
+  const s = Math.floor((diff / 1000) % 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${s}s`;
+}
+
 /** Poster-style event card (2:3) used across every listing and rail. */
 export default function EventCard({ event }) {
   const navigate = useNavigate();
-  const corner = event.online ? 'ONLINE' : event.chapter.flag;
+  const corner = event.online ? 'ONLINE' : event.chapter?.flag || '';
   const price = event.isFree ? 'Free' : `${formatPrice(event.price)} onwards`;
   const likes = `${((event.id * 13.7) % 180 + 12).toFixed(0)}K+`;
   const isPromoted = event.id % 3 === 0;
+
+  const [countdown, setCountdown] = useState(event.launchAt ? getCountdown(event.launchAt) : '');
+
+  useEffect(() => {
+    if (!event.launchAt) return;
+    const interval = setInterval(() => {
+      const cd = getCountdown(event.launchAt);
+      setCountdown(cd);
+      if (!cd) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [event.launchAt]);
 
   return (
     <div
@@ -22,16 +47,29 @@ export default function EventCard({ event }) {
         <EvImage seed={event.id} url={event.imageUrl} label={event.title} wmSize={64} />
         
         {/* Promoted Badge (Top Right) */}
-        {isPromoted && (
+        {isPromoted && !event.isLaunch && (
           <span className="absolute right-0 top-0 z-[2] rounded-bl-[4px] bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white leading-none">
             PROMOTED
           </span>
         )}
 
-        {/* Original Event Badge (Top Left) */}
-        {event.badge && (
-          <span className="absolute left-0 top-0 z-[2] rounded-br-[4px] bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white leading-none">
-            {event.badge}
+        {/* Launch Badge (Top Left) / Original Event Badge */}
+        {event.isLaunch ? (
+          <span className="absolute left-0 top-0 z-[2] rounded-br-[4px] bg-[#C99E25] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white leading-none">
+            LAUNCH
+          </span>
+        ) : (
+          event.badge && (
+            <span className="absolute left-0 top-0 z-[2] rounded-br-[4px] bg-brand px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white leading-none">
+              {event.badge}
+            </span>
+          )
+        )}
+
+        {/* Future Launch Countdown Chip */}
+        {event.isLaunch && countdown && (
+          <span className="absolute left-2.5 top-8 z-[2] rounded bg-black/60 backdrop-blur-md px-2 py-0.75 text-[10px] font-bold text-white leading-none border border-white/10 shadow">
+            in {countdown}
           </span>
         )}
 
@@ -46,10 +84,27 @@ export default function EventCard({ event }) {
       </div>
 
       <div className="mt-2.5 flex flex-col gap-0.5">
-        <div className="clamp-2 text-[14px] font-bold text-ink leading-tight group-hover:text-brand transition-colors">{event.title}</div>
-        <div className="text-[11px] text-ink-soft font-medium mt-0.5">{event.dateLabel}</div>
-        <div className="text-[11px] text-ink-mute font-medium">{event.cat} · {event.city}</div>
-        <div className={`mt-1 text-[11px] font-bold ${event.isFree ? 'text-success' : 'text-brand'}`}>{price}</div>
+        <div className="clamp-2 text-[14px] font-bold text-ink leading-tight group-hover:text-brand transition-colors">
+          {event.title}
+        </div>
+        <div className="text-[11px] text-ink-soft font-medium mt-0.5">
+          {event.dateLabel}
+        </div>
+        <div className="text-[11px] text-ink-mute font-medium flex items-center gap-1.5">
+          <span>{event.cat} · {event.city}</span>
+          {event.ownership && (
+            <span className={`text-[8.5px] font-bold uppercase rounded px-1.25 py-0.25 leading-none border ${
+              event.ownership === 'OBS' 
+                ? 'bg-amber-50 text-[#C99E25] border-amber-100' 
+                : 'bg-white text-neutral-500 border-neutral-300'
+            }`}>
+              {event.ownership === 'OBS' ? 'OBS' : 'Partner'}
+            </span>
+          )}
+        </div>
+        <div className={`mt-1 text-[11px] font-bold ${event.isFree ? 'text-success' : 'text-brand'}`}>
+          {price}
+        </div>
       </div>
     </div>
   );

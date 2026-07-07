@@ -4,7 +4,8 @@ import EventGrid from '../components/common/EventGrid';
 import { SkeletonGrid } from '../components/common/Skeleton';
 import { Icon } from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
-import { getEvents, CATEGORIES, CHAPTERS } from '../data/events';
+import { CATEGORIES, CHAPTERS } from '../data/events';
+import eventsJson from '../mock/events.json';
 
 const PRICE_OPTS = [['free', 'Free'], ['u500', 'Under ₹500'], ['m500', '₹500–2000'], ['a2000', 'Above ₹2000']];
 const DATE_OPTS = [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['weekend', 'This weekend'], ['range', 'Date range']];
@@ -23,6 +24,7 @@ export default function EventsListing() {
   const [chapMore, setChapMore] = useState(false);
 
   // URL is the source of truth for filters
+  const owner = params.get('owner') || 'all';
   const cats = (params.get('category') || '').split(',').filter(Boolean);
   const chaps = (params.get('chapter') || '').split(',').filter(Boolean);
   const price = params.get('price') || '';
@@ -45,7 +47,9 @@ export default function EventsListing() {
   const clearAll = () => setParams(new URLSearchParams(), { replace: true });
 
   const filtered = useMemo(() => {
-    let list = getEvents();
+    let list = eventsJson;
+    if (owner === 'obs') list = list.filter((e) => e.ownership === 'OBS');
+    if (owner === 'partner') list = list.filter((e) => e.ownership === 'PARTNER');
     if (cats.length) list = list.filter((e) => cats.includes(e.cat));
     if (chaps.length) list = list.filter((e) => chaps.includes(e.chapter.name));
     if (price === 'free') list = list.filter((e) => e.isFree);
@@ -127,6 +131,34 @@ export default function EventsListing() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Segmented owner tabs */}
+      <div className="mt-6 flex border-b border-line gap-6 text-sm">
+        <button
+          onClick={() => patch('owner', '')}
+          className={`pb-2.5 font-bold border-b-2 transition-all ${
+            owner === 'all' ? 'border-brand text-brand' : 'border-transparent text-ink-mute hover:text-ink'
+          }`}
+        >
+          All events
+        </button>
+        <button
+          onClick={() => patch('owner', 'obs')}
+          className={`pb-2.5 font-bold border-b-2 transition-all ${
+            owner === 'obs' ? 'border-brand text-brand' : 'border-transparent text-ink-mute hover:text-ink'
+          }`}
+        >
+          OBS events
+        </button>
+        <button
+          onClick={() => patch('owner', 'partner')}
+          className={`pb-2.5 font-bold border-b-2 transition-all ${
+            owner === 'partner' ? 'border-brand text-brand' : 'border-transparent text-ink-mute hover:text-ink'
+          }`}
+        >
+          Partner events
+        </button>
       </div>
 
       {applied.length > 0 && (

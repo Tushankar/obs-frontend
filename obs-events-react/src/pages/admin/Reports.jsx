@@ -20,7 +20,7 @@ function MonthlyChart({ data }) {
       <line x1={padL} y1={base} x2={W - padR} y2={base} stroke="#EAEAEA" strokeWidth="1.2" />
       {data.map((d, i) => {
         const h = ((d.revenue || 0) / maxRev) * ih;
-        return <rect key={d.month} x={padL + band * i + (band - bw) / 2} y={base - h} width={bw} height={Math.max(0, h)} rx="3" fill="#F84464" opacity="0.85" />;
+        return <rect key={d.month} x={padL + band * i + (band - bw) / 2} y={base - h} width={bw} height={Math.max(0, h)} rx="3" fill="#C99E25" opacity="0.85" />;
       })}
       <polyline points={pts.map((p) => `${p[0]},${p[1]}`).join(' ')} fill="none" stroke="#1f2933" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3.6" fill="#ffffff" stroke="#1f2933" strokeWidth="2" />)}

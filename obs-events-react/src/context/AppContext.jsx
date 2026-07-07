@@ -14,6 +14,7 @@ export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [order, setOrder] = useState(null); // { id, evId, lines, sub, disc, fee, total }
   const [joined, setJoined] = useState({}); // { [chapterName]: true }
+  const [authOpen, setAuthOpen] = useState(false);
   const idRef = useRef(0);
 
   const pushToast = useCallback((msg, ok = true) => {
@@ -35,6 +36,7 @@ export function AppProvider({ children }) {
     toasts, pushToast,
     order, setOrder,
     joined, toggleJoin,
+    authOpen, setAuthOpen
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
