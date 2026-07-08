@@ -1,120 +1,117 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HeroCarousel from '../components/home/HeroCarousel';
-import EventRail from '../components/home/EventRail';
-import CategoryTiles from '../components/home/CategoryTiles';
-import { SkeletonRail } from '../components/common/Skeleton';
-import { getEvents } from '../data/events';
+import ApiEventCard from '../components/common/ApiEventCard';
+import { SkeletonGrid } from '../components/common/Skeleton';
+import Seo from '../components/common/Seo';
+import api from '../lib/api';
 
-// New Sections
-import ChapterHighlightBand from '../components/home/ChapterHighlightBand';
-import ProgramBanner from '../components/home/ProgramBanner';
-import SpeakersRail from '../components/home/SpeakersRail';
-import LaunchesRail from '../components/home/LaunchesRail';
-import SponsorsStrip from '../components/home/SponsorsStrip';
-import NewsRail from '../components/home/NewsRail';
+// Phase 1 home: real events + categories + chapters. The mock hero carousel and
+// the Phase-5 rails (speakers/sponsors/news/program/launches) are re-introduced
+// with real data in Phase 5.
+
+function Rail({ title, events, seeAllTo, navigate, empty }) {
+  return (
+    <section className="mx-auto max-w-container px-4 pt-8 sm:px-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-ink">{title}</h2>
+        {seeAllTo && <button onClick={() => navigate(seeAllTo)} className="text-sm font-semibold text-brand transition hover:text-brand-dark">See all ›</button>}
+      </div>
+      {events === null ? (
+        <SkeletonGrid />
+      ) : events.length ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 xl:gap-6">
+          {events.map((e) => <ApiEventCard key={e.id} event={e} />)}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-line py-12 text-center text-sm text-ink-mute">{empty || 'No events yet — check back soon.'}</div>
+      )}
+    </section>
+  );
+}
 
 export default function Home() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const all = getEvents();
+  const [soon, setSoon] = useState(null);
+  const [recent, setRecent] = useState(null);
+  const [cats, setCats] = useState([]);
+  const [chapters, setChapters] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
+    api.listEvents({ sort: 'soonest', limit: 8 }).then((d) => setSoon(d.events)).catch(() => setSoon([]));
+    api.listEvents({ sort: 'newest', limit: 8 }).then((d) => setRecent(d.events)).catch(() => setRecent([]));
+    api.categories().then(setCats).catch(() => {});
+    api.chapters().then(setChapters).catch(() => {});
   }, []);
 
-  const slides = [
-    { ...all[0], bannerUrl: '/hero-events.png', bgClass: 'bg-[#0A0A12]' },
-    { ...all[34], bannerUrl: '/hero-summit.png', bgClass: 'bg-[#0A0A12]' },
-  ].map((e) => ({
-    slug: e.slug, seed: e.id, title: e.title, bannerUrl: e.bannerUrl, bgClass: e.bgClass || '', isCustomBanner: e.isCustomBanner, isCenterBanner: e.isCenterBanner,
-    meta: `${e.dateLabel} · ${e.venue}, ${e.city} · ${e.chapter.name}`,
-  }));
-
-  const recommended = all.slice(0, 8);
-  const weekend = all.filter((e) => /Sat|Sun/.test(e.dateLabel)).slice(0, 8);
-  const investor = all.filter((e) => e.cat === 'Investor Meetups').slice(0, 8);
-  const online = all.filter((e) => e.online).slice(0, 8);
-
-  const chapters10 = [
-    ['OBS India', '🇮🇳'], ['OBS UAE', '🇦🇪'], ['OBS Singapore', '🇸🇬'], ['OBS UK', '🇬🇧'],
-    ['OBS USA', '🇺🇸'], ['OBS Australia', '🇦🇺'], ['OBS Germany', '🇩🇪'], ['OBS Japan', '🇯🇵'],
-  ];
-
-  if (loading) {
-    return (
-      <div>
-        <div className="mx-auto max-w-container px-4 pt-4 sm:px-6"><div className="skeleton aspect-[16/5] min-h-[220px] rounded-xl" /></div>
-        <div className="mx-auto max-w-container px-4 pt-8 sm:px-6"><div className="skeleton mb-4 h-6 w-56 rounded" /><SkeletonRail /></div>
-        <div className="mx-auto max-w-container px-4 pt-8 sm:px-6"><div className="skeleton mb-4 h-6 w-64 rounded" /><SkeletonRail /></div>
-      </div>
-    );
-  }
+  const spotlight = [...chapters].filter((c) => c.isFlagship).slice(0, 8);
 
   return (
-    <div className="pb-8 bg-[#F5F5F5]">
-      <HeroCarousel slides={slides} />
+    <div className="bg-[#F5F5F5] pb-10">
+      <Seo description="Discover and book business events across 108 OBS chapters worldwide — summits, conferences, networking and more." />
 
-      {/* A. Chapter highlight band */}
-      <ChapterHighlightBand />
-
-      <EventRail title="Recommended events" events={recommended} seeAllTo="/events" />
-      <CategoryTiles />
-      <EventRail title="Happening this weekend" events={weekend} seeAllTo="/events" />
-
-      {/* B. 100 Days Program banner */}
-      <ProgramBanner />
-
-      {/* C. Featured speakers rail */}
-      <SpeakersRail />
-
-      {/* D. Launches rail */}
-      <LaunchesRail />
-
-      {/* E. Sponsors strip */}
-      <SponsorsStrip />
-
-      {/* F. From the newsroom rail */}
-      <NewsRail />
-
-      {/* CTA band */}
-      <section className="mx-auto max-w-container px-4 pt-8 sm:px-6">
-        <button 
-          onClick={() => navigate('/list-your-event')} 
-          className="w-full block overflow-hidden rounded-[10px] shadow-sm transition hover:opacity-95 aspect-[5.5/1]"
-        >
-          <img 
-            src="/banner.png" 
-            alt="Host your event with OBS" 
-            className="w-full h-full object-cover object-center block" 
-          />
-        </button>
+      {/* Hero band */}
+      <section className="bg-footer">
+        <div className="mx-auto max-w-container px-4 py-14 sm:px-6 sm:py-20">
+          <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-brand-light">One Business Season</div>
+          <h1 className="mt-3 max-w-[720px] text-3xl font-extrabold leading-tight text-white sm:text-[42px]">
+            Discover business events across <span className="text-brand-light">108 chapters</span> worldwide.
+          </h1>
+          <p className="mt-3 max-w-[560px] text-sm leading-relaxed text-white/70">
+            Summits, conferences, networking and more — find your next event and connect with the OBS community.
+          </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <button onClick={() => navigate('/events')} className="rounded-full bg-gold-gradient px-7 py-3 text-[13px] font-extrabold uppercase tracking-wider text-black transition hover:brightness-110">Browse events</button>
+            <button onClick={() => navigate('/chapters')} className="rounded-full border border-white/25 px-7 py-3 text-[13px] font-semibold text-white transition hover:bg-white/10">Explore chapters</button>
+          </div>
+        </div>
       </section>
 
-      <EventRail title="Investor & capital events" events={investor} seeAllTo="/events?category=Investor%20Meetups" />
+      {/* Category chips */}
+      {cats.length > 0 && (
+        <section className="mx-auto max-w-container px-4 pt-8 sm:px-6">
+          <div className="no-scrollbar flex gap-2.5 overflow-x-auto pb-1">
+            {cats.map((c) => (
+              <button key={c.slug} onClick={() => navigate(`/events?category=${c.slug}`)} className="shrink-0 rounded-full border border-line bg-white px-4 py-2 text-[13px] font-medium text-ink-soft transition hover:border-brand hover:text-brand">
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <Rail title="Happening soon" events={soon} seeAllTo="/events" navigate={navigate} />
+      <Rail title="Recently added" events={recent} seeAllTo="/events?sort=newest" navigate={navigate} empty="No new events yet." />
 
       {/* Chapter spotlight */}
-      <section className="mx-auto max-w-container px-4 pt-8 sm:px-6">
+      <section className="mx-auto max-w-container px-4 pt-10 sm:px-6">
         <h2 className="mb-4 text-2xl font-bold text-ink">Explore OBS chapters</h2>
         <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
           <button onClick={() => navigate('/chapters')} className="flex h-24 w-[200px] shrink-0 items-center justify-center rounded-[10px] border border-brand-soft bg-brand-soft p-3 transition hover:-translate-y-0.5 hover:border-brand">
-            <span className="text-sm font-semibold text-brand">All 108 chapters ›</span>
+            <span className="text-sm font-semibold text-brand">All {chapters.length || 108} chapters ›</span>
           </button>
-          {chapters10.map(([name, flag]) => (
-            <button key={name} onClick={() => navigate(`/chapters/${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`)} className="flex h-24 w-[200px] shrink-0 items-center gap-3 rounded-[10px] border border-line bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-brand">
-              <span className="text-3xl leading-none">{flag}</span>
-              <div>
-                <div className="text-sm font-semibold text-ink">{name}</div>
-                <div className="mt-0.5 text-xs text-ink-mute">{((name.length * 7) % 18) + 2} events</div>
+          {spotlight.map((c) => (
+            <button key={c.slug} onClick={() => navigate(`/chapters/${c.slug}`)} className="flex h-24 w-[200px] shrink-0 items-center gap-3 rounded-[10px] border border-line bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-brand">
+              <span className="text-3xl leading-none">{c.flagEmoji || '🏳️'}</span>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-ink">{c.name}</div>
+                <div className="mt-0.5 text-xs text-ink-mute">{c.tier || c.pillarGroup || 'Chapter'}</div>
               </div>
             </button>
           ))}
         </div>
       </section>
 
-      <EventRail title="Online events" events={online} seeAllTo="/webinars" />
+      {/* Organizer CTA */}
+      <section className="mx-auto max-w-container px-4 pt-10 sm:px-6">
+        <div className="flex flex-col items-start justify-between gap-4 rounded-2xl bg-footer px-6 py-8 sm:flex-row sm:items-center sm:px-10">
+          <div>
+            <div className="text-xl font-bold text-white">Hosting an event?</div>
+            <div className="mt-1 text-sm text-white/70">List it on OBS and reach members across 108 chapters.</div>
+          </div>
+          <button onClick={() => navigate('/list-your-event')} className="shrink-0 rounded-full bg-gold-gradient px-7 py-3 text-[13px] font-extrabold uppercase tracking-wider text-black transition hover:brightness-110">List your event</button>
+        </div>
+      </section>
     </div>
   );
 }

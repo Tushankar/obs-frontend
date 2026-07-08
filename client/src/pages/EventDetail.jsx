@@ -1,142 +1,182 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import EvImage from '../components/common/EvImage';
-import EventGrid from '../components/common/EventGrid';
-import BookingPanel from '../components/booking/BookingPanel';
+import ApiEventCard, { seedOf } from '../components/common/ApiEventCard';
+import Seo from '../components/common/Seo';
 import { Icon } from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
-import { ORGANIZERS, formatPrice, slugify, paletteFor, initials } from '../data/events';
-import eventsJson from '../mock/events.json';
+import api, { apiError } from '../lib/api';
+import { paletteFor } from '../data/events';
 
-const GOOD_TO_KNOW = [
-  'E-tickets are delivered instantly and scanned at the door — no printing needed.',
-  'Free cancellation up to 48 hours before showtime for a full refund.',
-  'Accessible seating is available — contact the venue after booking to arrange.',
-];
+function fmtRange(startAt, endAt, tz) {
+  if (!startAt) return 'Date to be announced';
+  const opts = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: tz || undefined };
+  const s = new Date(startAt).toLocaleString('en-IN', opts);
+  if (!endAt) return s;
+  const sameDay = new Date(startAt).toDateString() === new Date(endAt).toDateString();
+  const e = new Date(endAt).toLocaleString('en-IN', sameDay ? { hour: 'numeric', minute: '2-digit', timeZone: tz || undefined } : opts);
+  return `${s} – ${e}`;
+}
 
 export default function EventDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { pushToast } = useApp();
-  const event = eventsJson.find((e) => e.slug === slug);
-
-  const [qty, setQty] = useState({});
-  const [promo, setPromo] = useState({ value: '', ok: false, err: false });
+  const [event, setEvent] = useState(undefined); // undefined = loading, null = not found
+  const [similar, setSimilar] = useState([]);
   const [readMore, setReadMore] = useState(false);
-  const [sheet, setSheet] = useState(false);
 
-  useEffect(() => { window.scrollTo(0, 0); setQty({}); setPromo({ value: '', ok: false, err: false }); }, [slug]);
+  useEffect(() => {
+    let alive = true;
+    window.scrollTo(0, 0);
+    setEvent(undefined);
+    setReadMore(false);
+    api.event(slug)
+      .then((e) => { if (alive) setEvent(e); })
+      .catch(() => { if (alive) setEvent(null); });
+    api.eventSimilar(slug).then((s) => { if (alive) setSimilar(s); }).catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
 
-  if (!event) {
-    return <div className="mx-auto max-w-container px-6 py-20 text-center text-ink-mute">Event not found. <button onClick={() => navigate('/events')} className="text-brand underline">Browse events</button></div>;
+  if (event === undefined) {
+    return <div className="mx-auto max-w-container px-6 py-24 text-center text-ink-mute">Loading event…</div>;
+  }
+  if (event === null) {
+    return (
+      <div className="mx-auto max-w-container px-6 py-20 text-center text-ink-mute">
+        Event not found. <button onClick={() => navigate('/events')} className="text-brand underline">Browse events</button>
+      </div>
+    );
   }
 
-  const orgName = ORGANIZERS[event.id % 10];
-  const alsoLike = eventsJson.filter((e) => e.cat === event.cat && e.id !== event.id).slice(0, 4);
-  const minPrice = Math.min(...event.types.filter((t) => !t.soldOut).map((t) => t.price));
-  const [oc1, oc2] = paletteFor(event.id % 10 + 3);
+  const url = typeof window !== 'undefined' ? window.location.href : '';
+  const shareText = `${event.title} — on OBS Events`;
+  const copy = () => { try { navigator.clipboard.writeText(url); pushToast('Link copied'); } catch { pushToast('Could not copy', false); } };
+  const [oc1, oc2] = paletteFor(seedOf(event.organizer?.slug || event.id));
 
-  const share = () => { try { navigator.clipboard.writeText(window.location.href); } catch { /* noop */ } pushToast('Link copied'); };
+  const loc = event.isOnline ? 'Online event' : [event.venueName, event.city].filter(Boolean).join(', ') || 'Venue to be announced';
+  const directionsUrl = event.lat != null && event.lng != null
+    ? `https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}${event.placeId ? `&query_place_id=${event.placeId}` : ''}`
+    : null;
+  const mapEmbed = event.lat != null && event.lng != null
+    ? `https://maps.google.com/maps?q=${event.lat},${event.lng}&z=15&output=embed`
+    : null;
+
+  const ShareBtn = ({ href, onClick, label, children }) => (
+    <a
+      href={href}
+      onClick={onClick}
+      target={href ? '_blank' : undefined}
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-ink-soft transition hover:border-brand hover:text-brand"
+    >
+      {children}
+    </a>
+  );
 
   return (
     <div>
+      <Seo title={event.title} description={(event.description || '').slice(0, 160)} image={event.bannerUrl} type="article" />
+
       <div className="mx-auto max-w-container px-4 pt-4 sm:px-6">
         <div className="relative aspect-[16/6] min-h-[200px] overflow-hidden rounded-xl">
-          <EvImage seed={event.id} url={event.bannerUrl} label={event.title} wmSize={120} />
+          <EvImage seed={seedOf(event.id)} url={event.bannerUrl} label={event.title} wmSize={120} />
         </div>
       </div>
 
       <div className="mx-auto grid max-w-container grid-cols-1 items-start gap-8 px-4 pt-6 sm:px-6 lg:grid-cols-[1fr_380px]">
         {/* Main column */}
         <div>
-          <span className="inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{event.cat}</span>
+          {event.category && <span className="inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{event.category.name}</span>}
           <h1 className="mt-3 text-2xl font-bold leading-tight text-ink sm:text-[28px]">{event.title}</h1>
           <div className="mt-3.5 flex flex-wrap gap-4 text-sm text-ink-soft">
-            <span className="flex items-center gap-1.5"><Icon.Calendar /> {event.dateLabel}</span>
-            <span className="flex items-center gap-1.5"><Icon.Pin /> {event.online ? 'Online event' : `${event.venue}, ${event.city}`}</span>
-            <button onClick={() => navigate(`/chapters/${slugify(event.chapter.name)}`)} className="flex items-center gap-1.5 font-medium text-brand">{event.chapter.flag} {event.chapter.name}</button>
+            <span className="flex items-center gap-1.5"><Icon.Calendar /> {fmtRange(event.startAt, event.endAt, event.timezone)}</span>
+            <span className="flex items-center gap-1.5"><Icon.Pin /> {loc}</span>
+            {event.chapter && (
+              <button onClick={() => navigate(`/chapters/${event.chapter.slug}`)} className="flex items-center gap-1.5 font-medium text-brand">
+                {event.chapter.flagEmoji} {event.chapter.name}
+              </button>
+            )}
           </div>
-          <button onClick={share} className="mt-4 flex h-9 items-center gap-1.5 rounded-md border border-line bg-white px-3.5 text-[13px] text-ink-soft transition hover:border-brand"><Icon.Share width={15} height={15} /> Share</button>
+
+          {/* Share */}
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-[13px] text-ink-mute">Share</span>
+            <ShareBtn href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${url}`)}`} label="Share on WhatsApp"><Icon.Share width={14} height={14} /></ShareBtn>
+            <ShareBtn href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`} label="Share on X">𝕏</ShareBtn>
+            <ShareBtn href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`} label="Share on LinkedIn">in</ShareBtn>
+            <ShareBtn onClick={(e) => { e.preventDefault(); copy(); }} label="Copy link"><span className="text-[13px]">🔗</span></ShareBtn>
+          </div>
 
           <h2 className="mb-2.5 mt-8 text-lg font-bold text-ink">About this event</h2>
-          <p className={`text-sm leading-relaxed text-ink-soft ${readMore ? '' : 'clamp-6'}`}>{event.about}</p>
-          <button onClick={() => setReadMore((v) => !v)} className="mt-2 text-[13px] font-medium text-brand">{readMore ? 'Read less' : 'Read more'}</button>
+          <p className={`whitespace-pre-wrap text-sm leading-relaxed text-ink-soft ${readMore ? '' : 'clamp-6'}`}>{event.description || 'No description provided.'}</p>
+          {(event.description || '').length > 320 && (
+            <button onClick={() => setReadMore((v) => !v)} className="mt-2 text-[13px] font-medium text-brand">{readMore ? 'Read less' : 'Read more'}</button>
+          )}
 
-          <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Good to know</h2>
-          <ul className="flex flex-col gap-2.5">
-            {GOOD_TO_KNOW.map((g) => (
-              <li key={g} className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-soft"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />{g}</li>
-            ))}
-          </ul>
-
-          <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Venue</h2>
-          <div className="rounded-xl border border-line p-[18px]">
-            <div className="text-[15px] font-semibold text-ink">{event.online ? 'OBS Live Studio' : event.venue}</div>
-            <div className="mt-1 text-[13px] text-ink-mute">{event.online ? 'Streams worldwide · link sent after booking' : `${event.venue}, ${event.city}`}</div>
-            <div className="mt-3.5 flex h-[150px] items-center justify-center rounded-lg text-xs text-ink-mute" style={{ background: 'repeating-linear-gradient(45deg,#F5F5F5 0 12px,#EEEEEE 12px 24px)' }}>Map placeholder</div>
+          <h2 className="mb-3 mt-8 text-lg font-bold text-ink">{event.isOnline ? 'How to attend' : 'Venue'}</h2>
+          <div className="overflow-hidden rounded-xl border border-line">
+            <div className="p-[18px]">
+              <div className="text-[15px] font-semibold text-ink">{event.isOnline ? 'Online event' : event.venueName || 'Venue to be announced'}</div>
+              <div className="mt-1 text-[13px] text-ink-mute">
+                {event.isOnline ? 'Joining link is sent to ticket holders.' : [event.address, event.city, event.country].filter(Boolean).join(', ') || '—'}
+              </div>
+              {directionsUrl && (
+                <a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:text-brand-dark">
+                  <Icon.Pin width={13} height={13} /> Get directions
+                </a>
+              )}
+            </div>
+            {mapEmbed && (
+              <iframe title="Event location" src={mapEmbed} className="h-[220px] w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+            )}
           </div>
 
-          <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Organizer</h2>
-          <button onClick={() => navigate(`/organizers/${slugify(orgName)}`)} className="flex w-full items-center gap-3.5 rounded-xl border border-line p-4 text-left transition hover:border-brand">
-            <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full" style={{ backgroundImage: `linear-gradient(135deg,${oc1},${oc2})` }} />
-            <span className="flex-1">
-              <span className="block text-[15px] font-semibold text-ink">{orgName}</span>
-              <span className="mt-0.5 block text-[13px] text-ink-mute">View organizer profile ›</span>
-            </span>
-          </button>
-
-          {event.sponsors && event.sponsors.length > 0 && (
+          {event.organizer && (
             <>
-              <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Event Sponsors</h2>
-              <div className="rounded-xl border border-line p-5 bg-white shadow-sm">
-                <div className="flex flex-wrap gap-5 items-center">
-                  {event.sponsors.map((sp, idx) => (
-                    <div key={idx} className="flex flex-col items-center">
-                      <div className="h-16 w-36 bg-white rounded-lg flex items-center justify-center p-1.5 border border-line hover:border-brand transition shadow-sm">
-                        <img src={sp.logoUrl} alt={sp.name} className="max-h-full max-w-full object-contain filter grayscale hover:grayscale-0 transition duration-200" />
-                      </div>
-                      <span className="text-[9px] text-ink-mute mt-1 font-bold uppercase tracking-wider">{sp.tier}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Organizer</h2>
+              <button onClick={() => navigate(`/organizers/${event.organizer.slug}`)} className="flex w-full items-center gap-3.5 rounded-xl border border-line p-4 text-left transition hover:border-brand">
+                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full" style={{ backgroundImage: `linear-gradient(135deg,${oc1},${oc2})` }}>
+                  {event.organizer.logoUrl && <img src={event.organizer.logoUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+                </span>
+                <span className="flex-1">
+                  <span className="block text-[15px] font-semibold text-ink">{event.organizer.orgName}</span>
+                  <span className="mt-0.5 block text-[13px] text-ink-mute">View organizer profile ›</span>
+                </span>
+              </button>
             </>
           )}
 
-          <h2 className="mb-4 mt-8 text-lg font-bold text-ink">You may also like</h2>
-          <EventGrid events={alsoLike} />
+          {similar.length > 0 && (
+            <>
+              <h2 className="mb-4 mt-8 text-lg font-bold text-ink">You may also like</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                {similar.map((e) => <ApiEventCard key={e.id} event={e} />)}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Desktop booking panel */}
+        {/* Booking card — rendered but DISABLED until Phase 2 (tickets/payments) */}
         <div className="sticky top-[120px] hidden lg:block">
           <div className="rounded-xl border border-line p-5 shadow-panel">
-            <div className="mb-4 text-base font-bold text-ink">Select tickets</div>
-            <BookingPanel event={event} qty={qty} setQty={setQty} promo={promo} setPromo={setPromo} />
+            <div className="mb-1 text-base font-bold text-ink">Registration</div>
+            <p className="text-[13px] text-ink-mute">Ticketing for this event opens soon.</p>
+            <button disabled className="mt-4 h-11 w-full cursor-not-allowed rounded-md bg-brand/50 text-[15px] font-semibold text-white">Book now</button>
+            <p className="mt-2 text-center text-[11px] text-ink-faint">Tickets &amp; secure checkout arrive in the next release.</p>
           </div>
         </div>
       </div>
 
-      {/* Mobile sticky book bar */}
+      {/* Mobile book bar (disabled) */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 bg-white px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,.1)] lg:hidden">
         <div>
-          <div className="text-xs text-ink-mute">Tickets</div>
-          <div className="text-base font-bold text-ink">{event.isFree ? 'Free' : `From ${formatPrice(minPrice)}`}</div>
+          <div className="text-xs text-ink-mute">Registration</div>
+          <div className="text-[13px] font-semibold text-ink">Opens soon</div>
         </div>
-        <button onClick={() => setSheet(true)} className="h-11 rounded-md bg-brand px-7 text-[15px] font-semibold text-white">Book now</button>
+        <button disabled className="h-11 cursor-not-allowed rounded-md bg-brand/50 px-7 text-[15px] font-semibold text-white">Book now</button>
       </div>
-
-      {sheet && (
-        <div className="fixed inset-0 z-[110] lg:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setSheet(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] animate-slideUp overflow-y-auto rounded-t-2xl bg-white p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-base font-bold text-ink">Select tickets</div>
-              <button onClick={() => setSheet(false)} className="text-lg text-ink-mute">×</button>
-            </div>
-            <BookingPanel event={event} qty={qty} setQty={setQty} promo={promo} setPromo={setPromo} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

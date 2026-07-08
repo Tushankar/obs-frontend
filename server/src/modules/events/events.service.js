@@ -184,8 +184,9 @@ export async function presignBanner(organizerId, id, { contentType }) {
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Lean card shape for the public listing/home rails.
-function publicEventCard(e) {
+// Lean card shape for the public listing/home rails. Exported for reuse by the
+// organizer-profile and chapter-detail services.
+export function publicEventCard(e) {
   const cat = e.categoryId && e.categoryId._id ? e.categoryId : null;
   const chap = e.chapterId && e.chapterId._id ? e.chapterId : null;
   return {
@@ -257,4 +258,53 @@ export async function listPublicEvents(q) {
     Event.countDocuments(filter),
   ]);
   return { events: rows.map(publicEventCard), total, page, limit, pages: Math.ceil(total / limit) || 0 };
+}
+
+// Full public detail. meetingLink stays hidden in Phase 1 (no ticket holders yet
+// — it's revealed to ticket holders in Phase 2).
+function publicEventFull(e) {
+  const org = e.organizerId && e.organizerId._id ? e.organizerId : null;
+  return {
+    ...publicEventCard(e),
+    description: e.description || '',
+    address: e.address || null,
+    lat: e.lat ?? null,
+    lng: e.lng ?? null,
+    placeId: e.placeId || null,
+    viewsCount: e.viewsCount || 0,
+    isOnline: !!e.isOnline,
+    meetingLink: null, // revealed to ticket holders in Phase 2
+    organizer: org
+      ? { orgName: org.orgName, slug: org.slug, logoUrl: org.logoUrl || null, bio: org.bio || null, website: org.website || null }
+      : null,
+  };
+}
+
+const VIEWABLE = ['PUBLISHED', 'COMPLETED'];
+
+export async function getPublicEventBySlug(slug) {
+  const event = await Event.findOne({ slug, status: { $in: VIEWABLE } })
+    .populate('categoryId', 'name slug')
+    .populate('chapterId', 'name slug flagEmoji type tier')
+    .populate('organizerId', 'orgName slug logoUrl bio website');
+  if (!event) throw notFoundError('EVENT_NOT_FOUND', 'Event not found');
+  // Best-effort view counter (don't block the response).
+  Event.updateOne({ _id: event._id }, { $inc: { viewsCount: 1 } }).catch(() => {});
+  return publicEventFull(event);
+}
+
+// Next 4 upcoming published events sharing the category or chapter.
+export async function similarEvents(slug) {
+  const ev = await Event.findOne({ slug }).select('categoryId chapterId');
+  if (!ev) return [];
+  const or = [];
+  if (ev.categoryId) or.push({ categoryId: ev.categoryId });
+  if (ev.chapterId) or.push({ chapterId: ev.chapterId });
+  if (!or.length) return [];
+  const rows = await Event.find({ status: 'PUBLISHED', endAt: { $gte: new Date() }, slug: { $ne: slug }, $or: or })
+    .populate('categoryId', 'name slug')
+    .populate('chapterId', 'name slug flagEmoji')
+    .sort({ startAt: 1 })
+    .limit(4);
+  return rows.map(publicEventCard);
 }

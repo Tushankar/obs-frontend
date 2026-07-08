@@ -3,11 +3,12 @@ import { connectDB, disconnectDB } from '../config/db.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/slugify.js';
 import { buildChapters } from './chapters.data.js';
-import { Category, Chapter, CmsPage, User } from '../models/index.js';
+import { Category, Chapter, CmsPage, User, OrganizerProfile, Event } from '../models/index.js';
 
 // Idempotent seed (build plan §13 Phase 0.2): admin user, 12 categories,
-// 108 chapters (Appendix A), 3 CMS page stubs. Safe to re-run — everything
-// upserts by its natural key (slug / email).
+// 108 chapters (Appendix A), 3 CMS page stubs. Phase 1 adds a demo organizer +
+// a few PUBLISHED sample events so the public site has content for the exit
+// demo. Safe to re-run — everything upserts by its natural key (slug / email).
 
 const CATEGORIES = [
   'Networking', 'Conference', 'Summit', 'Workshop', 'Investor Meetup', 'Trade Delegation',
@@ -66,6 +67,76 @@ async function seedAdmin() {
   return email;
 }
 
+// Demo organizer (APPROVED) — lets you sign in and explore the organizer portal.
+const DEMO_ORGANIZER = {
+  name: 'Demo Events Co',
+  email: 'demo.organizer@obs.events',
+  password: 'Organizer@123',
+  orgName: 'Demo Events Co',
+  slug: 'demo-events-co',
+  bio: 'A seeded demo organizer for exploring OBS Events. Hosts summits, networking nights and webinars.',
+  website: 'https://demo.obs.events',
+};
+
+// Three PUBLISHED sample events (dates refreshed to the near future each reseed).
+const DEMO_EVENTS = [
+  { title: 'OBS Founders Summit 2026', categorySlug: 'summit', chapterSlug: 'india', days: 30, dur: 8,
+    venueName: 'Jio World Convention Centre', address: 'BKC, Mumbai, India', city: 'Mumbai', country: 'India', lat: 19.063, lng: 72.866,
+    description: 'A full-day gathering of founders, investors and operators — keynotes, curated roundtables and an evening networking mixer.' },
+  { title: 'AI Builders Networking Night', categorySlug: 'networking', chapterSlug: 'ai', days: 14, dur: 3,
+    venueName: 'The Leela Palace', address: 'Old Airport Road, Bengaluru, India', city: 'Bengaluru', country: 'India', lat: 12.9606, lng: 77.6485,
+    description: 'An evening for AI founders and engineers to connect over demos, lightning talks and drinks.' },
+  { title: 'Global Trade Masterclass (Online)', categorySlug: 'webinar', chapterSlug: 'global-trade', days: 7, dur: 2, isOnline: true,
+    description: 'A live online masterclass on cross-border trade, logistics and market-entry strategy for growing businesses.' },
+];
+
+async function seedDemoOrganizer() {
+  const passwordHash = await bcrypt.hash(DEMO_ORGANIZER.password, 12);
+  await User.updateOne(
+    { email: DEMO_ORGANIZER.email },
+    { $set: { passwordHash, role: 'ORGANIZER', status: 'ACTIVE' }, $setOnInsert: { name: DEMO_ORGANIZER.name, email: DEMO_ORGANIZER.email, emailVerifiedAt: new Date() } },
+    { upsert: true }
+  );
+  const user = await User.findOne({ email: DEMO_ORGANIZER.email });
+  await OrganizerProfile.updateOne(
+    { userId: user._id },
+    { $set: { orgName: DEMO_ORGANIZER.orgName, slug: DEMO_ORGANIZER.slug, bio: DEMO_ORGANIZER.bio, website: DEMO_ORGANIZER.website, status: 'APPROVED', approvedAt: new Date() } },
+    { upsert: true }
+  );
+  return OrganizerProfile.findOne({ userId: user._id });
+}
+
+async function seedDemoEvents(profile) {
+  for (const e of DEMO_EVENTS) {
+    const category = await Category.findOne({ slug: e.categorySlug });
+    if (!category) continue;
+    const chapter = e.chapterSlug ? await Chapter.findOne({ slug: e.chapterSlug }) : null;
+    const slug = slugify(e.title);
+    const startAt = new Date(Date.now() + e.days * 864e5);
+    const endAt = new Date(startAt.getTime() + e.dur * 36e5);
+    const doc = {
+      organizerId: profile._id,
+      categoryId: category._id,
+      chapterId: chapter?._id,
+      title: e.title,
+      slug,
+      description: e.description,
+      status: 'PUBLISHED',
+      publishedAt: new Date(),
+      isOnline: !!e.isOnline,
+      currency: 'INR',
+      timezone: 'Asia/Kolkata',
+      startAt,
+      endAt,
+      ...(e.isOnline
+        ? { meetingLink: 'https://meet.obs.events/demo' }
+        : { venueName: e.venueName, address: e.address, city: e.city, country: e.country, lat: e.lat, lng: e.lng }),
+    };
+    await Event.updateOne({ slug }, { $set: doc }, { upsert: true });
+  }
+  return Event.countDocuments({ status: 'PUBLISHED' });
+}
+
 async function seed() {
   await connectDB();
   console.log('[seed] seeding…');
@@ -76,6 +147,8 @@ async function seed() {
     await seedCmsPages(),
     await seedAdmin(),
   ];
+  const demoProfile = await seedDemoOrganizer();
+  const publishedEvents = await seedDemoEvents(demoProfile);
 
   const admins = await User.countDocuments({ role: 'ADMIN' });
 
@@ -84,6 +157,8 @@ async function seed() {
   console.log(`  chapters   : ${chapters}`);
   console.log(`  cms pages  : ${cmsPages}`);
   console.log(`  admins     : ${admins} (${adminEmail})`);
+  console.log(`  demo org   : ${DEMO_ORGANIZER.email} / ${DEMO_ORGANIZER.password} (APPROVED)`);
+  console.log(`  pub events : ${publishedEvents}`);
 
   if (chapters !== 108 || categories !== 12) {
     console.warn(`\n[seed] WARNING: expected 108 chapters + 12 categories, got ${chapters} + ${categories}`);

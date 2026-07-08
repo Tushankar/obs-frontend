@@ -6,8 +6,9 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 
 const router = Router();
 
-// Public catalog, mounted at /api/v1/events. Only PUBLISHED events. Detail
-// (/:slug) + /:slug/similar arrive in task 1.6.
+// Public catalog, mounted at /api/v1/events.
 router.get('/', validate({ query: schemas.publicListQuery }), asyncHandler(c.listPublic));
+router.get('/:slug/similar', validate({ params: schemas.slugParam }), asyncHandler(c.similar));
+router.get('/:slug', validate({ params: schemas.slugParam }), asyncHandler(c.getBySlug));
 
 export default router;

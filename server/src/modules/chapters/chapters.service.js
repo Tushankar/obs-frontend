@@ -1,4 +1,6 @@
-import { Chapter } from '../../models/index.js';
+import { Chapter, ChapterMember, Event } from '../../models/index.js';
+import { notFoundError } from '../../utils/errors.js';
+import { publicEventCard } from '../events/events.service.js';
 
 export function shapeChapter(c) {
   return {
@@ -25,4 +27,48 @@ export async function listChapters({ type, tier } = {}) {
   if (tier) filter.tier = tier;
   const rows = await Chapter.find(filter).sort({ sortOrder: 1, name: 1 });
   return rows.map(shapeChapter);
+}
+
+// Chapter detail (by slug) + member count + upcoming events + (if signed in)
+// whether the caller is a member.
+export async function getChapterBySlug(slug, userId) {
+  const chapter = await Chapter.findOne({ slug, status: 'APPROVED' });
+  if (!chapter) throw notFoundError('CHAPTER_NOT_FOUND', 'Chapter not found');
+  const [memberCount, events, membership] = await Promise.all([
+    ChapterMember.countDocuments({ chapterId: chapter._id }),
+    Event.find({ chapterId: chapter._id, status: 'PUBLISHED', endAt: { $gte: new Date() } })
+      .populate('categoryId', 'name slug')
+      .populate('chapterId', 'name slug flagEmoji')
+      .sort({ startAt: 1 })
+      .limit(24),
+    userId ? ChapterMember.exists({ chapterId: chapter._id, userId }) : Promise.resolve(null),
+  ]);
+  return {
+    chapter: { ...shapeChapter(chapter), description: chapter.description || null, coverUrl: chapter.coverUrl || null },
+    memberCount,
+    isMember: !!membership,
+    events: events.map(publicEventCard),
+  };
+}
+
+async function memberCountOf(chapterId) {
+  return ChapterMember.countDocuments({ chapterId });
+}
+
+export async function joinChapter(userId, chapterId) {
+  const chapter = await Chapter.findById(chapterId);
+  if (!chapter || chapter.status !== 'APPROVED') throw notFoundError('CHAPTER_NOT_FOUND', 'Chapter not found');
+  await ChapterMember.updateOne(
+    { chapterId, userId },
+    { $setOnInsert: { chapterId, userId, joinedAt: new Date() } },
+    { upsert: true }
+  );
+  return { joined: true, memberCount: await memberCountOf(chapterId) };
+}
+
+export async function leaveChapter(userId, chapterId) {
+  const chapter = await Chapter.findById(chapterId);
+  if (!chapter) throw notFoundError('CHAPTER_NOT_FOUND', 'Chapter not found');
+  await ChapterMember.deleteOne({ chapterId, userId });
+  return { joined: false, memberCount: await memberCountOf(chapterId) };
 }

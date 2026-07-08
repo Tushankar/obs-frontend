@@ -1,6 +1,7 @@
-import { OrganizerProfile } from '../../models/index.js';
+import { OrganizerProfile, Event } from '../../models/index.js';
 import { uniqueSlug } from '../../utils/slugify.js';
-import { conflict } from '../../utils/errors.js';
+import { conflict, notFoundError } from '../../utils/errors.js';
+import { publicEventCard } from '../events/events.service.js';
 
 // Client-facing shape of an organizer profile (own view / admin list).
 export function publicOrganizer(p) {
@@ -53,4 +54,25 @@ export async function apply(userId, { orgName, bio, website }) {
 export async function getMyProfile(userId) {
   const profile = await OrganizerProfile.findOne({ userId });
   return profile ? publicOrganizer(profile) : null;
+}
+
+// Public organizer profile (by slug) + their upcoming published events.
+export async function getPublicProfile(slug) {
+  const profile = await OrganizerProfile.findOne({ slug, status: 'APPROVED' });
+  if (!profile) throw notFoundError('ORGANIZER_NOT_FOUND', 'Organizer not found');
+  const events = await Event.find({ organizerId: profile._id, status: 'PUBLISHED', endAt: { $gte: new Date() } })
+    .populate('categoryId', 'name slug')
+    .populate('chapterId', 'name slug flagEmoji')
+    .sort({ startAt: 1 })
+    .limit(24);
+  return {
+    organizer: {
+      orgName: profile.orgName,
+      slug: profile.slug,
+      logoUrl: profile.logoUrl || null,
+      bio: profile.bio || null,
+      website: profile.website || null,
+    },
+    events: events.map(publicEventCard),
+  };
 }

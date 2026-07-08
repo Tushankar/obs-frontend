@@ -42,3 +42,13 @@ export async function listPublic(req, res) {
   const result = await eventService.listPublicEvents(req.query);
   res.status(200).json(result);
 }
+
+export async function getBySlug(req, res) {
+  const event = await eventService.getPublicEventBySlug(req.params.slug);
+  res.status(200).json({ event });
+}
+
+export async function similar(req, res) {
+  const events = await eventService.similarEvents(req.params.slug);
+  res.status(200).json({ events });
+}

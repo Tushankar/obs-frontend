@@ -90,6 +90,14 @@ api.geocode = (address) => unwrap(api.post('/geo/geocode', { address }));
 // Public event catalog (Phase 1.5) → { events, total, page, limit, pages }
 api.listEvents = (params) => unwrap(api.get('/events', { params }));
 
+// Public detail pages (Phase 1.6)
+api.event = (slug) => unwrap(api.get(`/events/${slug}`)).then((d) => d.event);
+api.eventSimilar = (slug) => unwrap(api.get(`/events/${slug}/similar`)).then((d) => d.events);
+api.organizerProfile = (slug) => unwrap(api.get(`/organizers/${slug}`));
+api.chapter = (slug) => unwrap(api.get(`/chapters/${slug}`));
+api.joinChapter = (id) => unwrap(api.post(`/chapters/${id}/join`));
+api.leaveChapter = (id) => unwrap(api.delete(`/chapters/${id}/join`));
+
 // Organizer events (Phase 1.2/1.3)
 api.organizerEvents = (params) => unwrap(api.get('/organizer/events', { params }));
 api.organizerEvent = (id) => unwrap(api.get(`/organizer/events/${id}`)).then((d) => d.event);
