@@ -17,6 +17,8 @@ import myOrderRoutes from './modules/orders/orders.me.routes.js';
 import categoryRoutes from './modules/categories/categories.routes.js';
 import chapterRoutes from './modules/chapters/chapters.routes.js';
 import geoRoutes from './modules/geo/geo.routes.js';
+import paymentRoutes from './modules/payments/payments.routes.js';
+import webhookRoutes from './modules/payments/webhooks.routes.js';
 
 // Builds and configures the Express app. Domain modules mount under /api/v1;
 // auth is live from Phase 0.3, the rest arrive in later phases.
@@ -25,6 +27,11 @@ export function createApp() {
 
   app.set('trust proxy', 1); // correct req.ip behind nginx/CloudFront (rate limiting)
   app.use(cors({ origin: env.APP_URL, credentials: true }));
+
+  // Payment webhooks need the RAW body for signature verification, so they mount
+  // BEFORE express.json() (§8.2) and before the global limiter (gateways retry).
+  app.use('/api/v1/webhooks', express.raw({ type: '*/*' }), webhookRoutes);
+
   app.use(express.json());
   app.use(cookieParser());
   app.use(globalLimiter); // 100 req / 15 min per IP (env-overridable)
@@ -51,6 +58,7 @@ export function createApp() {
   app.use('/api/v1/organizer', organizerRoutes);
   app.use('/api/v1/orders', orderRoutes);
   app.use('/api/v1/me/orders', myOrderRoutes);
+  app.use('/api/v1/payments', paymentRoutes);
   app.use('/api/v1/admin', adminRoutes);
 
   app.use(notFound);
