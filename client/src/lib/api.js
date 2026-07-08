@@ -129,6 +129,7 @@ api.stripeIntent = (orderId) => unwrap(api.post('/payments/stripe/intent', { ord
 api.myTickets = (scope) => unwrap(api.get('/me/tickets', { params: scope ? { scope } : {} })).then((d) => d.tickets);
 api.myTicket = (id) => unwrap(api.get(`/me/tickets/${id}`)).then((d) => d.ticket);
 api.ticketPdfBlob = (id) => api.get(`/me/tickets/${id}/pdf`, { responseType: 'blob' }).then((r) => r.data);
+api.validateTicket = (token) => unwrap(api.get(`/tickets/validate/${token}`)).then((d) => d.ticket);
 
 // Admin — event moderation (Phase 1.4)
 api.adminEvents = (params) => unwrap(api.get('/admin/events', { params }));

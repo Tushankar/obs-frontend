@@ -15,6 +15,7 @@ import adminRoutes from './modules/admin/admin.routes.js';
 import orderRoutes from './modules/orders/orders.routes.js';
 import myOrderRoutes from './modules/orders/orders.me.routes.js';
 import myTicketRoutes from './modules/tickets/tickets.routes.js';
+import ticketValidateRoutes from './modules/tickets/tickets.public.routes.js';
 import categoryRoutes from './modules/categories/categories.routes.js';
 import chapterRoutes from './modules/chapters/chapters.routes.js';
 import geoRoutes from './modules/geo/geo.routes.js';
@@ -52,6 +53,7 @@ export function createApp() {
   app.use('/api/v1/chapters', chapterRoutes);
   app.use('/api/v1/geo', geoRoutes);
   app.use('/api/v1/events', publicEventRoutes);
+  app.use('/api/v1/tickets', ticketValidateRoutes);
   app.use('/api/v1/organizers', publicOrganizerRoutes);
   app.use('/api/v1/organizer/events/:eventId/ticket-types', ticketTypeRoutes);
   app.use('/api/v1/organizer/events/:eventId/promo-codes', promoCodeRoutes);

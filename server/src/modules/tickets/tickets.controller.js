@@ -10,6 +10,11 @@ export async function getMine(req, res) {
   res.status(200).json({ ticket });
 }
 
+export async function validate(req, res) {
+  const ticket = await svc.validateByToken(req.params.qrToken);
+  res.status(200).json({ ticket });
+}
+
 export async function pdf(req, res) {
   const { pdf: buffer, filename } = await svc.ticketPdf(req.user.id, req.params.id);
   res.setHeader('Content-Type', 'application/pdf');

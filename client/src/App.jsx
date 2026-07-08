@@ -75,7 +75,7 @@ export default function App() {
       <RouteProgress />
       
       <Routes>
-        <Route path="/t/:status" element={<Validate />} />
+        <Route path="/t/:token" element={<Validate />} />
         <Route
           path="*"
           element={
