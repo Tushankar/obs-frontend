@@ -118,6 +118,15 @@ api.createPromoCode = (eventId, body) => unwrap(api.post(`/organizer/events/${ev
 api.updatePromoCode = (eventId, id, body) => unwrap(api.patch(`/organizer/events/${eventId}/promo-codes/${id}`, body)).then((d) => d.promoCode);
 api.deletePromoCode = (eventId, id) => unwrap(api.delete(`/organizer/events/${eventId}/promo-codes/${id}`));
 
+// Checkout, orders & payments (Phase 2)
+api.createOrder = (body) => unwrap(api.post('/orders', body)).then((d) => d.order);
+api.cancelOrder = (id) => unwrap(api.post(`/orders/${id}/cancel`)).then((d) => d.order);
+api.myOrders = (params) => unwrap(api.get('/me/orders', { params }));
+api.myOrder = (id) => unwrap(api.get(`/me/orders/${id}`)).then((d) => d.order);
+api.razorpayCreateOrder = (orderId) => unwrap(api.post('/payments/razorpay/order', { orderId }));
+api.razorpayVerify = (body) => unwrap(api.post('/payments/razorpay/verify', body));
+api.stripeIntent = (orderId) => unwrap(api.post('/payments/stripe/intent', { orderId }));
+
 // Admin — event moderation (Phase 1.4)
 api.adminEvents = (params) => unwrap(api.get('/admin/events', { params }));
 api.approveEvent = (id) => unwrap(api.post(`/admin/events/${id}/approve`)).then((d) => d.event);

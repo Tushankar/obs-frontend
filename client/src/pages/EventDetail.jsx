@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import EvImage from '../components/common/EvImage';
 import ApiEventCard, { seedOf } from '../components/common/ApiEventCard';
+import BookingCard from '../components/booking/BookingCard';
 import Seo from '../components/common/Seo';
 import { Icon } from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
@@ -158,24 +159,10 @@ export default function EventDetail() {
           )}
         </div>
 
-        {/* Booking card — rendered but DISABLED until Phase 2 (tickets/payments) */}
-        <div className="sticky top-[120px] hidden lg:block">
-          <div className="rounded-xl border border-line p-5 shadow-panel">
-            <div className="mb-1 text-base font-bold text-ink">Registration</div>
-            <p className="text-[13px] text-ink-mute">Ticketing for this event opens soon.</p>
-            <button disabled className="mt-4 h-11 w-full cursor-not-allowed rounded-md bg-brand/50 text-[15px] font-semibold text-white">Book now</button>
-            <p className="mt-2 text-center text-[11px] text-ink-faint">Tickets &amp; secure checkout arrive in the next release.</p>
-          </div>
+        {/* Booking card (live) — sticky on desktop, stacks below on mobile */}
+        <div className="lg:sticky lg:top-[120px]">
+          <BookingCard event={event} />
         </div>
-      </div>
-
-      {/* Mobile book bar (disabled) */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 bg-white px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,.1)] lg:hidden">
-        <div>
-          <div className="text-xs text-ink-mute">Registration</div>
-          <div className="text-[13px] font-semibold text-ink">Opens soon</div>
-        </div>
-        <button disabled className="h-11 cursor-not-allowed rounded-md bg-brand/50 px-7 text-[15px] font-semibold text-white">Book now</button>
       </div>
     </div>
   );

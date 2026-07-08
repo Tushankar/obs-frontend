@@ -86,8 +86,8 @@ export default function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/events" element={<EventsListing />} />
                   <Route path="/event/:slug" element={<EventDetail />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/checkout/success" element={<Success />} />
+                  <Route path="/checkout/:orderId" element={<RequireAuth><Checkout /></RequireAuth>} />
+                  <Route path="/checkout/:orderId/success" element={<RequireAuth><Success /></RequireAuth>} />
                   <Route path="/account/tickets" element={<RequireAuth><MyTickets /></RequireAuth>} />
                   <Route path="/account/tickets/:id" element={<RequireAuth><TicketDetail /></RequireAuth>} />
                   <Route path="/account/orders" element={<RequireAuth><Orders /></RequireAuth>} />

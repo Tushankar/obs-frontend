@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { Event, Category, Chapter, TicketType } from '../../models/index.js';
 import { uniqueSlug } from '../../utils/slugify.js';
 import { presignPut, objectUrl } from '../../utils/s3.js';
+import { env } from '../../config/env.js';
 import { AppError, badRequest, conflict, forbidden, notFoundError } from '../../utils/errors.js';
 
 // Organizer may edit/delete an event only while it's a draft or was rejected
@@ -273,6 +274,7 @@ function publicEventFull(e) {
     lng: e.lng ?? null,
     placeId: e.placeId || null,
     viewsCount: e.viewsCount || 0,
+    serviceFeePercent: env.SERVICE_FEE_PERCENT, // for the booking-card fee estimate
     isOnline: !!e.isOnline,
     meetingLink: null, // revealed to ticket holders in Phase 2
     organizer: org
