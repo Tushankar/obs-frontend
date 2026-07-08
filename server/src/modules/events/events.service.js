@@ -179,3 +179,82 @@ export async function presignBanner(organizerId, id, { contentType }) {
   const uploadUrl = await presignPut({ key, contentType });
   return { uploadUrl, key, fileUrl: objectUrl(key), expiresIn: 300 };
 }
+
+// ===== Public catalog (task 1.5) =====
+
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Lean card shape for the public listing/home rails.
+function publicEventCard(e) {
+  const cat = e.categoryId && e.categoryId._id ? e.categoryId : null;
+  const chap = e.chapterId && e.chapterId._id ? e.chapterId : null;
+  return {
+    id: String(e._id),
+    title: e.title,
+    slug: e.slug,
+    bannerUrl: e.bannerUrl || null,
+    startAt: e.startAt || null,
+    endAt: e.endAt || null,
+    timezone: e.timezone || 'Asia/Kolkata',
+    currency: e.currency || 'INR',
+    isOnline: !!e.isOnline,
+    venueName: e.venueName || null,
+    city: e.city || null,
+    country: e.country || null,
+    isFeatured: !!e.isFeatured,
+    category: cat ? { name: cat.name, slug: cat.slug } : null,
+    chapter: chap ? { name: chap.name, slug: chap.slug, flagEmoji: chap.flagEmoji || null } : null,
+  };
+}
+
+const EMPTY_PAGE = (page, limit) => ({ events: [], total: 0, page, limit, pages: 0 });
+
+// Public event listing — only PUBLISHED, upcoming by default. Every filter maps
+// to an indexed field (status/startAt, city, categoryId, chapterId).
+export async function listPublicEvents(q) {
+  const { page, limit, sort } = q;
+  const filter = { status: 'PUBLISHED' };
+
+  const includePast = q.includePast === '1' || q.includePast === 'true';
+  if (!includePast) filter.endAt = { $gte: new Date() };
+
+  if (q.q) {
+    const rx = { $regex: escapeRegex(q.q), $options: 'i' };
+    filter.$or = [{ title: rx }, { description: rx }, { city: rx }, { venueName: rx }];
+  }
+  if (q.city) filter.city = { $regex: `^${escapeRegex(q.city)}$`, $options: 'i' };
+  if (q.mode === 'online') filter.isOnline = true;
+  if (q.mode === 'venue') filter.isOnline = false;
+
+  if (q.category) {
+    const cat = await Category.findOne({ slug: q.category }).select('_id');
+    if (!cat) return EMPTY_PAGE(page, limit);
+    filter.categoryId = cat._id;
+  }
+  if (q.chapter) {
+    const chap = await Chapter.findOne({ slug: q.chapter }).select('_id');
+    if (!chap) return EMPTY_PAGE(page, limit);
+    filter.chapterId = chap._id;
+  }
+  if (q.dateFrom || q.dateTo) {
+    filter.startAt = {};
+    if (q.dateFrom) filter.startAt.$gte = q.dateFrom;
+    if (q.dateTo) filter.startAt.$lte = q.dateTo;
+  }
+
+  const sortSpec =
+    sort === 'newest' ? { publishedAt: -1, createdAt: -1 } :
+    sort === 'popular' ? { viewsCount: -1, startAt: 1 } :
+    { startAt: 1 };
+
+  const [rows, total] = await Promise.all([
+    Event.find(filter)
+      .populate('categoryId', 'name slug')
+      .populate('chapterId', 'name slug flagEmoji')
+      .sort(sortSpec)
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Event.countDocuments(filter),
+  ]);
+  return { events: rows.map(publicEventCard), total, page, limit, pages: Math.ceil(total / limit) || 0 };
+}

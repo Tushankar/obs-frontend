@@ -36,3 +36,9 @@ export async function submit(req, res) {
   const event = await eventService.submitEvent(req.organizer._id, req.params.id);
   res.status(200).json({ event });
 }
+
+// ----- Public catalog -----
+export async function listPublic(req, res) {
+  const result = await eventService.listPublicEvents(req.query);
+  res.status(200).json(result);
+}

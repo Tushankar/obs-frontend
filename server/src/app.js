@@ -6,6 +6,7 @@ import { globalLimiter } from './middleware/rateLimit.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import organizerRoutes from './modules/organizers/organizers.routes.js';
+import publicEventRoutes from './modules/events/events.public.routes.js';
 import organizerEventRoutes from './modules/events/events.organizer.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 import categoryRoutes from './modules/categories/categories.routes.js';
@@ -37,6 +38,7 @@ export function createApp() {
   app.use('/api/v1/categories', categoryRoutes);
   app.use('/api/v1/chapters', chapterRoutes);
   app.use('/api/v1/geo', geoRoutes);
+  app.use('/api/v1/events', publicEventRoutes);
   app.use('/api/v1/organizer/events', organizerEventRoutes);
   app.use('/api/v1/organizer', organizerRoutes);
   app.use('/api/v1/admin', adminRoutes);

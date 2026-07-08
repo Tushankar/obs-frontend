@@ -87,6 +87,9 @@ api.categories = () => unwrap(api.get('/categories')).then((d) => d.categories);
 api.chapters = (params) => unwrap(api.get('/chapters', { params })).then((d) => d.chapters);
 api.geocode = (address) => unwrap(api.post('/geo/geocode', { address }));
 
+// Public event catalog (Phase 1.5) → { events, total, page, limit, pages }
+api.listEvents = (params) => unwrap(api.get('/events', { params }));
+
 // Organizer events (Phase 1.2/1.3)
 api.organizerEvents = (params) => unwrap(api.get('/organizer/events', { params }));
 api.organizerEvent = (id) => unwrap(api.get(`/organizer/events/${id}`)).then((d) => d.event);

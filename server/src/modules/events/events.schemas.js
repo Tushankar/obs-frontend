@@ -50,3 +50,25 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export const bannerSchema = z.object({
   contentType: z.enum(IMAGE_TYPES, { errorMap: () => ({ message: 'Banner must be a JPEG, PNG, WebP or GIF image' }) }),
 });
+
+// Public catalog list (§7 GET /events). `category`/`chapter` are slugs. The
+// price/owner/program params are accepted for forward-compat (Phase 2/5) and
+// ignored in Phase 1.
+export const publicListQuery = z.object({
+  q: z.string().trim().max(160).optional(),
+  category: z.string().trim().max(160).optional(),
+  city: z.string().trim().max(120).optional(),
+  chapter: z.string().trim().max(160).optional(),
+  mode: z.enum(['online', 'venue']).optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  sort: z.enum(['soonest', 'newest', 'popular']).default('soonest'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(48).default(12),
+  includePast: z.string().optional(),
+  price: z.enum(['free', 'paid']).optional(),
+  owner: z.enum(['all', 'obs', 'partner']).optional(),
+  program: z.string().trim().max(160).optional(),
+});
+
+export const slugParam = z.object({ slug: z.string().trim().min(1).max(200) });
