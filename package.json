@@ -1,0 +1,19 @@
+{
+  "name": "obs-events",
+  "private": true,
+  "version": "1.0.0",
+  "description": "OBS Events — global event discovery & ticketing platform (MERN monorepo)",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev --workspace client",
+    "dev:server": "npm run dev --workspace server",
+    "build:client": "npm run build --workspace client",
+    "start:server": "npm run start --workspace server"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
