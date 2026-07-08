@@ -6,6 +6,7 @@ import { globalLimiter } from './middleware/rateLimit.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import organizerRoutes from './modules/organizers/organizers.routes.js';
+import organizerEventRoutes from './modules/events/events.organizer.routes.js';
 import adminRoutes from './modules/admin/admin.routes.js';
 
 // Builds and configures the Express app. Domain modules mount under /api/v1;
@@ -30,6 +31,7 @@ export function createApp() {
   });
 
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/organizer/events', organizerEventRoutes);
   app.use('/api/v1/organizer', organizerRoutes);
   app.use('/api/v1/admin', adminRoutes);
 

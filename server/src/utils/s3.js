@@ -14,3 +14,10 @@ export function presignGet({ key, expiresIn = 300 }) {
   const cmd = new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key });
   return getSignedUrl(s3, cmd, { expiresIn });
 }
+
+// Canonical public object URL for a key (used for banners, which are shown on
+// public event pages). Serving these publicly is a bucket-policy / CloudFront
+// concern handled in the Phase 4 hardening + deploy tasks.
+export function objectUrl(key) {
+  return `https://${env.S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+}
