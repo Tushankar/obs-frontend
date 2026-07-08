@@ -1,11 +1,11 @@
 # OBS EVENTS — PROGRESS
 
 Current phase: 0
-Last session: —
+Last session: 2026-07-08 — Phase 0 in progress (task 0.1 done)
 Stack: MERN (MongoDB Atlas + Mongoose · Express · React 18 + Vite · Node 20) — see obs-events-build-plan.md v1.1
 
 ## Phase 0 — Foundation
-- [ ] 0.1 Repo scaffold: client/ (Vite + React 18 + Tailwind + React Router v6), server/ (Express + Mongoose, ES modules, nodemon), root npm workspaces
+- [x] 0.1 Repo scaffold: client/ (Vite + React 18 + Tailwind + React Router v6), server/ (Express + Mongoose, ES modules, nodemon), root npm workspaces
 - [ ] 0.2 Mongoose models (§5); Atlas or local single-node replica set; seed.js: admin, 12 categories, 108 chapters (type, tier, pillarGroup, ecosystemTier A–E, isFlagship, sortOrder — Appendix A), CMS stubs
 - [ ] 0.3 Auth: register/login (bcrypt 12), refresh rotation, Google id_token verify, forgot/reset, middleware (requireAuth, requireRole, zod validate, rate limits), error handler
 - [ ] 0.4 Utils: S3 presigned PUT/GET, mailer (Nodemailer SMTP, provider-agnostic, + EmailLog), nextSeq() counters, slugify
@@ -59,9 +59,21 @@ Stack: MERN (MongoDB Atlas + Mongoose · Express · React 18 + Vite · Node 20) 
 - [ ] EXIT: user creates a community chapter; speaker/sponsor/article render; /program day-by-day works; owner tabs filter; /launches countdown
 
 ## Decisions
+- Phase 0 setup (2026-07-08): DB for local build/verification = **MongoDB Atlas** (URI supplied by user, goes in server/.env — no local mongod on this machine). UI wiring scope for Phase 0 = **auth only** (login/signup/Google + role guards + real axios client in 0.5); all other client pages stay on mock data until their own phase. Chapter moderation default = APPROVED (§5). Client is already extensively built with mock data — do NOT rebuild it; integrate + wire per phase.
+- Phase 0 task 0.1 (2026-07-08): the previously-committed root+server scaffold (commits 4e5635b, 9a06d24) had been deleted in the working tree; restored it (matches plan §13). Renamed the client workspace package `obs-events`→`client` (it collided with the root package name and broke `npm install` under workspaces). Consolidated the duplicate build-plan/progress files: `obs-events-build-plan new.md`/`PROGRESS new.md` were byte-identical to the unsuffixed files except CRLF line endings — removed the `*new*` copies and kept the unsuffixed names the plan/loop prompt reference. Added `.env` to .gitignore.
 - v1.1: MERN stack; order items + invoice embedded in orders; all money as integer paise; ecosystemTier A–E added to chapters
 - v1.3: email via Nodemailer (SMTP), provider-agnostic mailer util (env: SMTP_HOST/PORT/SECURE/USER/PASS + EMAIL_FROM) — replaces SendGrid; Node.js + MongoDB unchanged. chapter creation OPEN to any signed-in user (events stay organizer-gated) [CONFIRM: source said both — using chapters-open/events-gated]; new collections Sponsor, PartnerApplication, Speaker, Article, Program, ProgramDay; event fields ownership(OBS/Partner)/isLaunch/launchAt/programId/programDayNumber/speakerIds; chapter fields createdById/isOfficial/status; 100 Days = 15 Oct→22 Jan yearly; frontend prompt obs-frontend-new-sections-ui-prompt.md
 - v1.2: explicit order+payment state model (§8.0, PENDING = draft/held); Google Maps Platform for venue autocomplete + geocode fallback + embedded map (§8.7); new keys GOOGLE_MAPS_API_KEY (server) + VITE_GOOGLE_MAPS_API_KEY (browser)
 
 ## Known issues / TODO
-- —
+- Atlas connection string still needed from user for task 0.2 (seed + verify) and 0.3 (auth E2E). Put it in `server/.env` as `MONGODB_URI`.
+- Google OAuth Client ID + Secret needed from user to verify "Google signup end to end" at task 0.3 (code will be built regardless).
+- `npm install` reports 2 transitive dev-dep vulnerabilities (vite/esbuild chain) — deferred; fixing needs a breaking major bump, out of Phase 0 scope.
+- Node here is v24 (plan targets Node 20); satisfies `engines: >=20`. No action needed.
+- Client `/t/:status` route param vs plan's `/t/:token` — cosmetic mismatch to reconcile when the validation page is wired (Phase 2.8).
+
+## Session log
+- 2026-07-08 · task 0.1 (repo scaffold) — DONE
+  - Files: `package.json` (root workspaces, restored), `server/package.json`, `server/.env.example`, `server/src/app.js`, `server/src/config/env.js`, `server/src/index.js` (restored); `client/package.json` (renamed pkg → `client`); `.gitignore` (+`.env`); removed `obs-events-build-plan new.md`, `PROGRESS new.md`.
+  - Verified: `npm install` resolves all 3 workspaces (236 pkgs); `node server/src/index.js` boots and `GET /api/v1/health` returns `{ok:true,...}`; `npm run build --workspace client` compiles (104 modules, vite 5.4).
+  - Learned: client is a BrowserRouter SPA (main.jsx → BrowserRouter+AppProvider→App) with ~30 pages driven by `src/mock/*` + `AppContext`; no backend calls yet. Server index.js does NOT connect Mongo yet (that's 0.2), so it boots standalone.
