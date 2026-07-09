@@ -3,14 +3,22 @@ import { env } from './config/env.js';
 import { connectDB } from './config/db.js';
 import { createApp } from './app.js';
 import { expireOrders } from './jobs/expireOrders.js';
+import { remind24h } from './jobs/remind24h.js';
+import { completeEvents } from './jobs/completeEvents.js';
 
 // Background jobs. Started only here (not in createApp) so tests/seed don't run
-// them. More crons (remind24h, completeEvents) arrive in Phase 4.
+// them. §8.6: expiry (*/5 min), remind24h + completeEvents (hourly).
 function startJobs() {
   cron.schedule('*/5 * * * *', () => {
     expireOrders().catch((e) => console.error('[cron expireOrders] failed:', e.message));
   });
-  console.log('[obs-events] cron scheduled: expireOrders (*/5 * * * *)');
+  cron.schedule('0 * * * *', () => {
+    remind24h().catch((e) => console.error('[cron remind24h] failed:', e.message));
+  });
+  cron.schedule('0 * * * *', () => {
+    completeEvents().catch((e) => console.error('[cron completeEvents] failed:', e.message));
+  });
+  console.log('[obs-events] cron scheduled: expireOrders (*/5 * * * *), remind24h + completeEvents (0 * * * *)');
 }
 
 // Connect to MongoDB (Phase 0.2) then stand up the HTTP server.

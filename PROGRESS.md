@@ -1,7 +1,7 @@
 # OBS EVENTS — PROGRESS
 
-Current phase: 4 — IN PROGRESS (reports, automation, launch). 4.1 reports DONE. Next: 4.2 crons.
-Last session: 2026-07-09 — Phase 4 started (4.1 reports 12/12 ✅). Phase 3 COMPLETE before this. Tasks 3.1 (dashboard 7/7) + 3.2 (registrations + XLSX export 11/11) + 3.3 (check-in + scanner 11/11) + 3.4 (refunds 27/27) + 3.5 (admin panel 33/33) ✅ + EXIT dry run 19/19 ✅. Live-keys sign-off (real gateway order/refund calls + S3/inbox) carries over from Phase 2 as the remaining human sign-off. Phase 2 complete before this (EXIT 8/8; live gateway checkout + real S3/inbox remain the human sign-off). Demo organizer: demo.organizer@obs.events / Organizer@123 (APPROVED) + 3 seeded published events. Verify scripts run with `SMTP_HOST=` (jsonTransport) + dummy `RAZORPAY_WEBHOOK_SECRET`/`STRIPE_WEBHOOK_SECRET` for webhook tests.
+Current phase: 4 — IN PROGRESS (reports, automation, launch). 4.1 reports + 4.2 crons DONE. Next: 4.3 hardening.
+Last session: 2026-07-09 — Phase 4 in progress (4.1 reports 12/12 ✅, 4.2 crons 10/10 ✅). Phase 3 COMPLETE before this. Tasks 3.1 (dashboard 7/7) + 3.2 (registrations + XLSX export 11/11) + 3.3 (check-in + scanner 11/11) + 3.4 (refunds 27/27) + 3.5 (admin panel 33/33) ✅ + EXIT dry run 19/19 ✅. Live-keys sign-off (real gateway order/refund calls + S3/inbox) carries over from Phase 2 as the remaining human sign-off. Phase 2 complete before this (EXIT 8/8; live gateway checkout + real S3/inbox remain the human sign-off). Demo organizer: demo.organizer@obs.events / Organizer@123 (APPROVED) + 3 seeded published events. Verify scripts run with `SMTP_HOST=` (jsonTransport) + dummy `RAZORPAY_WEBHOOK_SECRET`/`STRIPE_WEBHOOK_SECRET` for webhook tests.
 Env note: SERVICE_FEE_PERCENT=5, ORDER_HOLD_MINUTES=15 set; **gateway keys (Razorpay/Stripe) + AWS creds are EMPTY**, SMTP (Gmail) is set. So webhook fulfilment is verified via locally-signed payloads; live gateway create/dashboard-webhooks + real S3 objects are the Phase-2 EXIT human sign-off. Verify scripts run with `SMTP_HOST=` to force jsonTransport (no real sends).
 Stack: MERN (MongoDB Atlas + Mongoose · Express · React 18 + Vite · Node 20) — see obs-events-build-plan.md v1.1
 
@@ -43,7 +43,7 @@ Stack: MERN (MongoDB Atlas + Mongoose · Express · React 18 + Vite · Node 20) 
 
 ## Phase 4 — Reports, automation, launch
 - [x] 4.1 Reports aggregations §11 + admin reports page (recharts→kept existing hand-drawn SVG, see Decisions)
-- [ ] 4.2 remind24h + completeEvents crons
+- [x] 4.2 remind24h + completeEvents crons
 - [ ] 4.3 Hardening: zod everywhere, helmet, CORS allowlist, webhook raw-body ordering, private S3 + signed reads
 - [ ] 4.4 SPA SEO: server /sitemap.xml + robots, helmet meta/OG per event; branding pass (white + red #F84464 — obs-home-ui-prompt.md)
 - [ ] 4.5 Deploy: Atlas (M0 dev / M10 prod), EC2 API (pm2 + nginx + certbot), React build on S3 + CloudFront, live webhook URLs, live-keys checklist
@@ -101,6 +101,9 @@ Stack: MERN (MongoDB Atlas + Mongoose · Express · React 18 + Vite · Node 20) 
 - Client `/t/:status` route param vs plan's `/t/:token` — cosmetic mismatch to reconcile when the validation page is wired (Phase 2.8).
 
 ## Session log
+- 2026-07-09 · task 4.2 (crons: remind24h + completeEvents) — DONE
+  - Server: `jobs/remind24h.js` (hourly, window [now+23.5h,now+24.5h], claims reminderSentAt BEFORE sending as the idempotency gate, dedups by email, VALID holders only) + `jobs/completeEvents.js` (hourly, PUBLISHED+endAt<now → COMPLETED). Both scheduled `0 * * * *` in index.js alongside expireOrders.
+  - Verified: E2E **10/10** — remind window/dedup/USED-exclusion (2 sent), reminderSentAt set, outside-window skipped, 2 EVENT_REMINDER logs, re-run 0 (claim gate); completeEvents past→COMPLETED, future stays, idempotent.
 - 2026-07-09 · task 4.1 (admin reports §11) — DONE
   - Server: new `modules/reports` (summary/monthly/by-event/top-events) mounted `/api/v1/admin/reports` (ADMIN).
   - Client: `api.reports*`; wired existing hand-drawn `Reports.jsx` to the API, fixed KPI money formatting, real CSV export; Reports nav + route.
