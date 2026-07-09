@@ -12,9 +12,20 @@ const money = (paise, currency = 'INR') => {
 export default function Success() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const { pushToast } = useApp();
   const [order, setOrder] = useState(undefined);
   const [waited, setWaited] = useState(0);
   const timer = useRef(null);
+
+  // Invoice objects are private in S3; fetch a short-lived signed URL on demand.
+  const downloadInvoice = async () => {
+    try {
+      const { url } = await api.invoiceUrl(orderId);
+      window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      pushToast(apiError(e, 'Invoice is not available yet'), false);
+    }
+  };
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -76,8 +87,8 @@ export default function Success() {
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button onClick={() => navigate('/account/tickets')} className="h-[46px] flex-1 rounded-md bg-brand text-sm font-semibold text-white transition hover:bg-brand-dark">View my tickets</button>
-          {paid && order.invoice?.pdfUrl && (
-            <a href={order.invoice.pdfUrl} target="_blank" rel="noreferrer" className="flex h-[46px] flex-1 items-center justify-center rounded-md border border-line text-sm font-medium text-ink-soft transition hover:border-brand">Download invoice</a>
+          {paid && order.invoice?.available && (
+            <button onClick={downloadInvoice} className="flex h-[46px] flex-1 items-center justify-center rounded-md border border-line text-sm font-medium text-ink-soft transition hover:border-brand">Download invoice</button>
           )}
           <button onClick={() => navigate('/account/orders')} className="h-[46px] flex-1 rounded-md border border-line text-sm font-medium text-ink-soft transition hover:border-brand">My orders</button>
         </div>

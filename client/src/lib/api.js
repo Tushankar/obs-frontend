@@ -132,6 +132,7 @@ api.createOrder = (body) => unwrap(api.post('/orders', body)).then((d) => d.orde
 api.cancelOrder = (id) => unwrap(api.post(`/orders/${id}/cancel`)).then((d) => d.order);
 api.myOrders = (params) => unwrap(api.get('/me/orders', { params }));
 api.myOrder = (id) => unwrap(api.get(`/me/orders/${id}`)).then((d) => d.order);
+api.invoiceUrl = (id) => unwrap(api.get(`/me/orders/${id}/invoice`)); // { url } — short-lived signed GET
 api.razorpayCreateOrder = (orderId) => unwrap(api.post('/payments/razorpay/order', { orderId }));
 api.razorpayVerify = (body) => unwrap(api.post('/payments/razorpay/verify', body));
 api.stripeIntent = (orderId) => unwrap(api.post('/payments/stripe/intent', { orderId }));
