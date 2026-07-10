@@ -36,6 +36,11 @@ export async function createEvent(req, res) {
   res.status(201).json({ event });
 }
 
+export async function getEvent(req, res) {
+  const event = await adminService.getEventAdmin(req.params.id);
+  res.status(200).json({ event });
+}
+
 export async function featureEvent(req, res) {
   const event = await adminService.updateEventAdmin(req.user.id, req.params.id, req.body);
   res.status(200).json({ event });

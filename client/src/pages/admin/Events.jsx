@@ -3,6 +3,7 @@ import api, { apiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import { PageHead, Table, Pill, statusTone, Btn, Tabs, Loading, selectCls } from '../../components/portal/Kit';
 import ReasonDialog from '../../components/admin/ReasonDialog';
+import EventFormModal from '../../components/admin/EventFormModal';
 import { AdminIcon } from '../../components/admin/AdminIcons';
 
 const TABS = [
@@ -22,6 +23,7 @@ export default function Events() {
   const [data, setData] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [rejecting, setRejecting] = useState(null); // event pending rejection
+  const [editor, setEditor] = useState(null); // null | {} (new) | eventRow (edit)
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -114,12 +116,14 @@ export default function Events() {
         return <span className="text-ink-soft">{fmtDate(ev.startAt)}</span>;
       case 'status':
         return <Pill tone={statusTone(ev.status)}>{ev.status.replace('_', ' ')}</Pill>;
-      case 'actions':
+      case 'actions': {
+        const edit = <Btn size="sm" variant="ghost" disabled={busyId === ev.id} onClick={() => setEditor(ev)}><AdminIcon.Edit size={13} /> Edit</Btn>;
         if (ev.status === 'PENDING_APPROVAL') {
           return (
             <div className="flex justify-end gap-2">
               <Btn size="sm" disabled={busyId === ev.id} onClick={() => approve(ev)}>Approve</Btn>
               <Btn size="sm" variant="ghost" disabled={busyId === ev.id} onClick={() => setRejecting(ev)} className="!text-[#B3093C]">Reject</Btn>
+              {edit}
             </div>
           );
         }
@@ -139,13 +143,18 @@ export default function Events() {
               <Btn size="sm" variant={ev.isFeatured ? 'outline' : 'ghost'} disabled={busyId === ev.id} onClick={() => toggleFeature(ev)}>
                 <AdminIcon.Star size={13} /> {ev.isFeatured ? 'Unfeature' : 'Feature'}
               </Btn>
+              {edit}
             </div>
           );
         }
-        if (ev.status === 'REJECTED' && ev.rejectionReason) {
-          return <span className="text-[12px] text-ink-mute" title={ev.rejectionReason}>Rejected</span>;
-        }
-        return <span className="text-[12px] text-ink-faint">—</span>;
+        // DRAFT / REJECTED / others — editable (rejection reason shown on hover)
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {ev.status === 'REJECTED' && ev.rejectionReason && <span className="text-[12px] text-ink-mute" title={ev.rejectionReason}>Rejected</span>}
+            {edit}
+          </div>
+        );
+      }
       default:
         return null;
     }
@@ -156,6 +165,7 @@ export default function Events() {
       <PageHead
         title="Events"
         subtitle={data ? `${data.total} ${tab ? TABS.find(([k]) => k === tab)[1].toLowerCase() : 'total'}` : 'Moderation queue'}
+        actions={<Btn onClick={() => setEditor({})}><AdminIcon.Plus size={15} /> New OBS event</Btn>}
       />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       {data === null ? (
@@ -174,6 +184,8 @@ export default function Events() {
         placeholder="e.g. The description is incomplete — please add an agenda and venue details."
         confirmLabel="Reject event"
       />
+
+      {editor && <EventFormModal initial={editor} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); load(); }} />}
     </div>
   );
 }

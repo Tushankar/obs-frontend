@@ -44,10 +44,12 @@ export default function Home() {
   const [program, setProgram] = useState(null);
   const [launches, setLaunches] = useState(null);
   const [heroSlides, setHeroSlides] = useState(null); // null=loading, []=none → static band
+  const [featured, setFeatured] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     api.heroSlides().then((d) => setHeroSlides(Array.isArray(d) ? d : [])).catch(() => setHeroSlides([]));
+    api.listEvents({ owner: 'obs', featured: 'true', limit: 8 }).then((d) => setFeatured(d.events || [])).catch(() => {});
     api.listEvents({ sort: 'soonest', limit: 8 }).then((d) => setSoon(d.events)).catch(() => setSoon([]));
     api.launches('upcoming').then((d) => setLaunches((d || []).slice(0, 8))).catch(() => setLaunches([]));
     api.listEvents({ sort: 'newest', limit: 8 }).then((d) => setRecent(d.events)).catch(() => setRecent([]));
@@ -123,6 +125,7 @@ export default function Home() {
         </section>
       )}
 
+      {featured.length > 0 && <Rail title="Featured on OBS" events={featured} seeAllTo="/events?owner=obs" navigate={navigate} />}
       <Rail title="Happening soon" events={soon} seeAllTo="/events" navigate={navigate} />
       <Rail title="Recently added" events={recent} seeAllTo="/events?sort=newest" navigate={navigate} empty="No new events yet." />
       {launches?.length > 0 && <Rail title="On the Launchpad" events={launches} seeAllTo="/launches" navigate={navigate} />}

@@ -38,6 +38,29 @@ export default function EventFormModal({ initial, onClose, onSaved }) {
 
   useEffect(() => { api.categories().then(setCats).catch(() => {}); }, []);
 
+  // Edit mode: fetch the full event (the list row omits description/venue/etc.)
+  // and prefill — so admins can edit live events without wiping hidden fields.
+  useEffect(() => {
+    if (!editing) return;
+    api.adminEvent(initial.id).then((e) => setForm((f) => ({
+      ...f,
+      title: e.title || '',
+      categoryId: e.category?.id || '',
+      description: e.description || '',
+      isOnline: !!e.isOnline,
+      meetingLink: e.meetingLink || '',
+      venueName: e.venueName || '',
+      address: e.address || '',
+      city: e.city || '',
+      country: e.country || 'India',
+      startAt: toLocal(e.startAt),
+      endAt: toLocal(e.endAt),
+      bannerUrl: e.bannerUrl || '',
+      isFeatured: !!e.isFeatured,
+      publish: e.status === 'PUBLISHED',
+    }))).catch(() => {});
+  }, [editing, initial]);
+
   const save = async () => {
     if (form.title.trim().length < 3) { pushToast('Title must be at least 3 characters', false); return; }
     if (form.publish) {

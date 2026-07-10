@@ -24,6 +24,7 @@ router.post(
 // --- Events (task 1.4 + 3.5 feature toggle + admin-created OBS events) ---
 router.get('/events', validate({ query: schemas.listEventsQuery }), asyncHandler(c.listEvents));
 router.post('/events', validate({ body: schemas.createEventSchema }), asyncHandler(c.createEvent));
+router.get('/events/:id', validate({ params: schemas.idParam }), asyncHandler(c.getEvent));
 router.post('/events/:id/approve', validate({ params: schemas.idParam }), asyncHandler(c.approveEvent));
 router.post(
   '/events/:id/reject',

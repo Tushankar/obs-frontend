@@ -155,6 +155,7 @@ api.setEventOwnership = (id, ownership) => unwrap(api.patch(`/admin/events/${id}
 // Admin-created OBS platform events (create/publish directly, no organizer submit).
 api.adminCreateEvent = (body) => unwrap(api.post('/admin/events', body)).then((d) => d.event);
 api.adminUpdateEvent = (id, body) => unwrap(api.patch(`/admin/events/${id}`, body)).then((d) => d.event);
+api.adminEvent = (id) => unwrap(api.get(`/admin/events/${id}`)).then((d) => d.event); // full detail for editing
 api.launches = (scope) => unwrap(api.get('/launches', { params: scope ? { scope } : {} })).then((d) => d.events);
 
 // Admin — dashboard, users, transactions (Phase 3.5)
