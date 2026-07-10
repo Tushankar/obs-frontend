@@ -2,7 +2,9 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { getEvents, getChapterGroups, ORGANIZERS, CITIES, slugify, paletteFor, initials } from '../../data/events';
+import { CURRENCIES, CURRENCY_LABEL } from '../../lib/currency';
 import { Icon } from '../common/Icon';
+import PickerModal from '../common/PickerModal';
 
 const SUBNAV = [
   ['Events', '/events'],
@@ -14,12 +16,13 @@ const SUBNAV = [
 export default function Header({ onOpenAuth }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut, city, setCity, pushToast } = useApp();
+  const { user, signOut, city, setCity, currency, setCurrency, pushToast } = useApp();
 
   const [q, setQ] = useState('');
   const [focus, setFocus] = useState(false);
   const [hl, setHl] = useState(-1);
-  const [cityOpen, setCityOpen] = useState(false);
+  const [cityModal, setCityModal] = useState(false);
+  const [curModal, setCurModal] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
   const [mSearch, setMSearch] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -117,22 +120,16 @@ export default function Header({ onOpenAuth }) {
 
         {/* Right cluster */}
         <div className="ml-auto flex shrink-0 items-center gap-4">
-          <div className="relative flex items-center">
-            <button onClick={() => setCityOpen((v) => !v)} className="flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink h-[28px] transition-colors">
-              <span>{city}</span>
-              <Icon.ChevronDown className={`transition-transform ${cityOpen ? 'rotate-180' : ''}`} width={8} height={8} />
-            </button>
-            {cityOpen && (
-              <>
-                <div className="fixed inset-0 z-[59]" onClick={() => setCityOpen(false)} />
-                <div className="absolute right-0 top-[34px] z-[60] w-[190px] rounded-lg border border-line bg-white p-1.5 shadow-pop">
-                  {CITIES.map((c) => (
-                    <button key={c} onClick={() => { setCity(c); setCityOpen(false); }} className="block w-full rounded-md px-3 py-2 text-left text-sm text-ink hover:bg-surface">{c}</button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          {/* Display currency (display-only; charge stays in each event's currency) */}
+          <button onClick={() => setCurModal(true)} className="flex items-center gap-1.5 h-[28px] text-[13px] font-medium text-ink-soft transition-colors hover:text-ink" title="Display currency">
+            <span>{currency}</span>
+            <Icon.ChevronDown width={8} height={8} />
+          </button>
+          <button onClick={() => setCityModal(true)} className="flex items-center gap-1.5 h-[28px] text-[13px] font-medium text-ink-soft transition-colors hover:text-ink">
+            <Icon.Pin width={12} height={12} />
+            <span>{city}</span>
+            <Icon.ChevronDown width={8} height={8} />
+          </button>
 
           {!user ? (
             <button onClick={onOpenAuth} className="h-[28px] flex items-center justify-center rounded-full bg-gold-gradient px-4 text-[11px] font-bold text-black uppercase tracking-wider transition hover:scale-[1.03] leading-none">Sign in</button>
@@ -176,9 +173,12 @@ export default function Header({ onOpenAuth }) {
               className="h-10 w-full rounded-md border border-brand bg-white px-3.5 text-sm text-ink outline-none" />
           </div>
         )}
-        <div className="mx-auto flex h-8 w-full max-w-container items-center border-t border-line px-4">
-          <button onClick={() => setCityOpen((v) => !v)} className="flex items-center gap-1.5 text-[13px] text-ink-soft">
-            <span>{city}</span><Icon.ChevronDown className={cityOpen ? 'rotate-180' : ''} width={9} height={9} />
+        <div className="mx-auto flex h-8 w-full max-w-container items-center gap-4 border-t border-line px-4">
+          <button onClick={() => setCityModal(true)} className="flex items-center gap-1.5 text-[13px] text-ink-soft">
+            <Icon.Pin width={11} height={11} /><span>{city}</span><Icon.ChevronDown width={9} height={9} />
+          </button>
+          <button onClick={() => setCurModal(true)} className="flex items-center gap-1.5 text-[13px] text-ink-soft">
+            <span>{currency}</span><Icon.ChevronDown width={9} height={9} />
           </button>
         </div>
       </div>
@@ -203,17 +203,26 @@ export default function Header({ onOpenAuth }) {
         </nav>
       </div>
 
-      {/* City popover (mobile, anchored under bar) */}
-      {cityOpen && (
-        <div className="lg:hidden">
-          <div className="fixed inset-0 z-[59]" onClick={() => setCityOpen(false)} />
-          <div className="absolute left-4 z-[60] w-[190px] rounded-lg border border-line bg-white p-1.5 shadow-pop">
-            {CITIES.map((c) => (
-              <button key={c} onClick={() => { setCity(c); setCityOpen(false); }} className="block w-full rounded-md px-3 py-2 text-left text-sm text-ink hover:bg-surface">{c}</button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Professional modal pickers (currency + city) — replace the old dropdowns */}
+      <PickerModal
+        open={curModal}
+        onClose={() => setCurModal(false)}
+        title="Choose your currency"
+        subtitle="Prices are shown in this currency. You're always charged in the event's own currency."
+        options={CURRENCIES.map((c) => ({ value: c, label: CURRENCY_LABEL[c] }))}
+        value={currency}
+        onSelect={setCurrency}
+        columns={2}
+      />
+      <PickerModal
+        open={cityModal}
+        onClose={() => setCityModal(false)}
+        title="Choose your city"
+        options={CITIES.map((c) => ({ value: c, label: c }))}
+        value={city}
+        onSelect={setCity}
+        columns={2}
+      />
 
       <Drawer open={drawer} onClose={() => setDrawer(false)} onOpenAuth={onOpenAuth} />
     </header>

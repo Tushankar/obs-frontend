@@ -2,23 +2,22 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import api, { apiError } from '../../lib/api';
-
-const money = (paise, currency = 'INR') => {
-  const sym = currency === 'INR' ? '₹' : `${currency} `;
-  return sym + (Number(paise) / 100).toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US');
-};
+import { displayMoney } from '../../lib/currency';
 
 // Live booking card (§10): ticket-type steppers honoring min/max + availability,
 // promo input, fee-inclusive estimate, "Book now" → creates the held order and
 // goes to checkout (free orders skip straight to success).
 export default function BookingCard({ event }) {
   const navigate = useNavigate();
-  const { user, setAuthOpen, pushToast } = useApp();
+  const { user, setAuthOpen, pushToast, currency: displayCurrency } = useApp();
   const [qty, setQty] = useState({});
   const [promo, setPromo] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const currency = event.currency || 'INR';
+  const eventCurrency = event.currency || 'INR';
+  // Prices display in the visitor's selected currency; the actual charge stays
+  // in the event's own currency (shown as a note when they differ).
+  const show = (paise) => displayMoney(paise, eventCurrency, displayCurrency);
   const feePct = event.serviceFeePercent || 0;
   const onSale = (event.ticketTypes || []).filter((t) => t.onSale);
 
@@ -74,7 +73,7 @@ export default function BookingCard({ event }) {
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-ink">{t.name}</div>
                       {t.description && <div className="mt-0.5 text-[12px] text-ink-mute">{t.description}</div>}
-                      <div className="mt-1 text-[13px] font-bold text-brand">{t.price === 0 ? 'Free' : money(t.price, currency)}</div>
+                      <div className="mt-1 text-[13px] font-bold text-brand">{t.price === 0 ? 'Free' : show(t.price)}</div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <button onClick={() => dec(t)} disabled={n === 0} className="grid h-8 w-8 place-items-center rounded-md border border-line text-lg text-ink-soft disabled:opacity-40">−</button>
@@ -97,9 +96,10 @@ export default function BookingCard({ event }) {
 
           {count > 0 && (
             <div className="mt-4 border-t border-line pt-3 text-[13px]">
-              <div className="flex justify-between text-ink-soft"><span>Subtotal</span><span>{money(subtotal, currency)}</span></div>
-              {fee > 0 && <div className="mt-1 flex justify-between text-ink-soft"><span>Service fee ({feePct}%)</span><span>{money(fee, currency)}</span></div>}
-              <div className="mt-2 flex items-baseline justify-between"><span className="text-[15px] font-bold text-ink">Total</span><span className="text-[15px] font-bold text-ink">{money(total, currency)}</span></div>
+              <div className="flex justify-between text-ink-soft"><span>Subtotal</span><span>{show(subtotal)}</span></div>
+              {fee > 0 && <div className="mt-1 flex justify-between text-ink-soft"><span>Service fee ({feePct}%)</span><span>{show(fee)}</span></div>}
+              <div className="mt-2 flex items-baseline justify-between"><span className="text-[15px] font-bold text-ink">Total</span><span className="text-[15px] font-bold text-ink">{show(total)}</span></div>
+              {displayCurrency !== eventCurrency && <div className="mt-1 text-[11px] text-ink-faint">Approx in {displayCurrency}; you’ll be charged in {eventCurrency}.</div>}
               {promo && <div className="mt-1 text-[11px] text-ink-mute">Promo applied at checkout.</div>}
             </div>
           )}

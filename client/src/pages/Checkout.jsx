@@ -6,6 +6,7 @@ import StripePaymentForm from '../components/checkout/StripePaymentForm';
 import { Icon } from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
 import api, { apiError, apiErrorCode } from '../lib/api';
+import { displayMoney } from '../lib/currency';
 
 const money = (paise, currency = 'INR') => {
   const sym = currency === 'INR' ? '₹' : `${currency} `;
@@ -15,7 +16,7 @@ const money = (paise, currency = 'INR') => {
 export default function Checkout() {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const { pushToast } = useApp();
+  const { pushToast, currency: displayCurrency } = useApp();
   const [order, setOrder] = useState(undefined); // undefined=loading, null=not found
   const [left, setLeft] = useState(null);
   const [paying, setPaying] = useState(false);
@@ -135,6 +136,9 @@ export default function Checkout() {
           {order.discountAmount > 0 && <div className="mt-2 flex justify-between text-[13px] text-success"><span>Discount</span><span>− {money(order.discountAmount, order.currency)}</span></div>}
           <div className="mt-2 flex justify-between text-[13px] text-ink-soft"><span>Service fee</span><span>{money(order.serviceFee, order.currency)}</span></div>
           <div className="mt-3.5 flex items-baseline justify-between"><span className="text-base font-bold text-ink">Total</span><span className="text-base font-bold text-ink">{money(order.totalAmount, order.currency)}</span></div>
+          {displayCurrency !== order.currency && (
+            <div className="mt-1 text-right text-[11px] text-ink-mute">≈ {displayMoney(order.totalAmount, order.currency, displayCurrency)} · charged in {order.currency}</div>
+          )}
         </aside>
       </div>
     </div>

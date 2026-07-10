@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import EvImage from './EvImage';
+import { useApp } from '../../context/AppContext';
+import { displayMoney } from '../../lib/currency';
 
 // Stable numeric seed from a Mongo ObjectId string (EvImage's palette needs a number).
 export function seedOf(id = '') {
@@ -11,22 +13,16 @@ export function seedOf(id = '') {
 const fmtDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Date TBA';
 
-// §10 card price hint. fromPrice is integer paise (from the API); 0 = free.
-const fmtFromPrice = (paise, currency = 'INR') => {
-  if (paise == null) return null;
-  if (paise === 0) return 'Free';
-  const sym = currency === 'INR' ? '₹' : `${currency} `;
-  return `from ${sym}${(paise / 100).toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US')}`;
-};
-
 // Poster-style card (2:3) for real API events. No mock decorations — shows only
 // real data (banner, date, category, venue/online, chapter tag).
 export default function ApiEventCard({ event }) {
   const navigate = useNavigate();
+  const { currency } = useApp();
   const go = () => navigate(`/event/${event.slug}`);
   const loc = event.isOnline ? 'Online' : event.venueName || event.city || 'Venue TBA';
   const corner = event.isOnline ? 'ONLINE' : event.chapter?.flagEmoji || '';
-  const price = fmtFromPrice(event.fromPrice, event.currency);
+  // §10 price hint, converted to the visitor's selected display currency.
+  const price = event.fromPrice == null ? null : event.fromPrice === 0 ? 'Free' : `from ${displayMoney(event.fromPrice, event.currency || 'INR', currency)}`;
 
   return (
     <div

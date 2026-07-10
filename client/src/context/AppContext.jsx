@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import api, { setAccessToken, setOnLogout } from '../lib/api';
+import { detectDefaultCurrency } from '../lib/currency';
 
 const AppContext = createContext(null);
 
@@ -13,6 +14,7 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false); // initial silent-refresh done
   const [city, setCity] = useState('Mumbai');
+  const [currency, setCurrencyState] = useState(detectDefaultCurrency); // display currency (UAE→AED else INR)
   const [toasts, setToasts] = useState([]);
   const [order, setOrder] = useState(null); // { id, evId, lines, sub, disc, fee, total }
   const [joined, setJoined] = useState({}); // { [chapterName]: true }
@@ -57,6 +59,13 @@ export function AppProvider({ children }) {
   const signIn = useCallback((u) => setUser(u), []);
   const signOut = logout;
 
+  // Persist the visitor's display-currency choice (display-only; never changes
+  // the charge currency, which stays each event's own currency server-side).
+  const setCurrency = useCallback((c) => {
+    setCurrencyState(c);
+    try { localStorage.setItem('obs_currency', c); } catch { /* ignore */ }
+  }, []);
+
   const toggleJoin = useCallback((name) => {
     setJoined((j) => ({ ...j, [name]: !j[name] }));
     return !joined[name];
@@ -84,6 +93,7 @@ export function AppProvider({ children }) {
     login, register, loginWithGoogle, logout,
     signIn, signOut,
     city, setCity,
+    currency, setCurrency,
     toasts, pushToast,
     order, setOrder,
     joined, toggleJoin,
