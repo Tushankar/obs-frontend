@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ApiEventCard from '../components/common/ApiEventCard';
 import ArticleCard from '../components/cards/ArticleCard';
 import ChapterHighlightBand from '../components/home/ChapterHighlightBand';
+import HeroCarousel from '../components/home/HeroCarousel';
 import { SkeletonGrid } from '../components/common/Skeleton';
 import Seo from '../components/common/Seo';
 import api from '../lib/api';
@@ -42,9 +43,11 @@ export default function Home() {
   const [articles, setArticles] = useState([]);
   const [program, setProgram] = useState(null);
   const [launches, setLaunches] = useState(null);
+  const [heroSlides, setHeroSlides] = useState(null); // null=loading, []=none → static band
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    api.heroSlides().then((d) => setHeroSlides(Array.isArray(d) ? d : [])).catch(() => setHeroSlides([]));
     api.listEvents({ sort: 'soonest', limit: 8 }).then((d) => setSoon(d.events)).catch(() => setSoon([]));
     api.launches('upcoming').then((d) => setLaunches((d || []).slice(0, 8))).catch(() => setLaunches([]));
     api.listEvents({ sort: 'newest', limit: 8 }).then((d) => setRecent(d.events)).catch(() => setRecent([]));
@@ -68,22 +71,27 @@ export default function Home() {
     <div className="bg-[#F5F5F5] pb-10">
       <Seo description="Discover and book business events across 108 OBS chapters worldwide — summits, conferences, networking and more." />
 
-      {/* Hero band */}
-      <section className="bg-footer">
-        <div className="mx-auto max-w-container px-4 py-14 sm:px-6 sm:py-20">
-          <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-brand-light">One Business Season</div>
-          <h1 className="mt-3 max-w-[720px] text-3xl font-extrabold leading-tight text-white sm:text-[42px]">
-            Discover business events across <span className="text-brand-light">108 chapters</span> worldwide.
-          </h1>
-          <p className="mt-3 max-w-[560px] text-sm leading-relaxed text-white/70">
-            Summits, conferences, networking and more — find your next event and connect with the OBS community.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button onClick={() => navigate('/events')} className="rounded-full bg-gold-gradient px-7 py-3 text-[13px] font-extrabold uppercase tracking-wider text-black transition hover:brightness-110">Browse events</button>
-            <button onClick={() => navigate('/chapters')} className="rounded-full border border-white/25 px-7 py-3 text-[13px] font-semibold text-white transition hover:bg-white/10">Explore chapters</button>
+      {/* Hero — admin-managed carousel (Admin → Hero carousel); static band
+          fallback while loading / when no active slides exist */}
+      {heroSlides?.length > 0 ? (
+        <HeroCarousel slides={heroSlides} />
+      ) : (
+        <section className="bg-footer">
+          <div className="mx-auto max-w-container px-4 py-14 sm:px-6 sm:py-20">
+            <div className="text-[12px] font-bold uppercase tracking-[0.14em] text-brand-light">One Business Season</div>
+            <h1 className="mt-3 max-w-[720px] text-3xl font-extrabold leading-tight text-white sm:text-[42px]">
+              Discover business events across <span className="text-brand-light">108 chapters</span> worldwide.
+            </h1>
+            <p className="mt-3 max-w-[560px] text-sm leading-relaxed text-white/70">
+              Summits, conferences, networking and more — find your next event and connect with the OBS community.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button onClick={() => navigate('/events')} className="rounded-full bg-gold-gradient px-7 py-3 text-[13px] font-extrabold uppercase tracking-wider text-black transition hover:brightness-110">Browse events</button>
+              <button onClick={() => navigate('/chapters')} className="rounded-full border border-white/25 px-7 py-3 text-[13px] font-semibold text-white transition hover:bg-white/10">Explore chapters</button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Category chips */}
       {cats.length > 0 && (

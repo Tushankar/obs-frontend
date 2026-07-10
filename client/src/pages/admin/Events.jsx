@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import api, { apiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
-import { PageHead, Table, Pill, statusTone, Btn, Tabs, Loading } from '../../components/portal/Kit';
+import { PageHead, Table, Pill, statusTone, Btn, Tabs, Loading, selectCls } from '../../components/portal/Kit';
+import ReasonDialog from '../../components/admin/ReasonDialog';
+import { AdminIcon } from '../../components/admin/AdminIcons';
 
 const TABS = [
   ['PENDING_APPROVAL', 'Pending'],
@@ -19,6 +21,7 @@ export default function Events() {
   const [tab, setTab] = useState('PENDING_APPROVAL');
   const [data, setData] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [rejecting, setRejecting] = useState(null); // event pending rejection
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -31,19 +34,26 @@ export default function Events() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function decide(action, ev) {
+  async function approve(ev) {
     setBusyId(ev.id);
     try {
-      if (action === 'approve') {
-        await api.approveEvent(ev.id);
-        pushToast(`Published “${ev.title}”`);
-      } else {
-        const reason = window.prompt(`Reject “${ev.title}”? Enter a reason (emailed to the organizer):`, '');
-        if (reason === null) { setBusyId(null); return; }
-        if (reason.trim().length < 3) { pushToast('A reason of at least 3 characters is required', false); setBusyId(null); return; }
-        await api.rejectEvent(ev.id, reason.trim());
-        pushToast(`Rejected “${ev.title}”`);
-      }
+      await api.approveEvent(ev.id);
+      pushToast(`Published “${ev.title}”`);
+      load();
+    } catch (e) {
+      pushToast(apiError(e, 'Action failed'), false);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function reject(reason) {
+    const ev = rejecting;
+    setBusyId(ev.id);
+    try {
+      await api.rejectEvent(ev.id, reason);
+      pushToast(`Rejected “${ev.title}”`);
+      setRejecting(null);
       load();
     } catch (e) {
       pushToast(apiError(e, 'Action failed'), false);
@@ -108,8 +118,8 @@ export default function Events() {
         if (ev.status === 'PENDING_APPROVAL') {
           return (
             <div className="flex justify-end gap-2">
-              <Btn size="sm" disabled={busyId === ev.id} onClick={() => decide('approve', ev)}>Approve</Btn>
-              <Btn size="sm" variant="danger" disabled={busyId === ev.id} onClick={() => decide('reject', ev)}>Reject</Btn>
+              <Btn size="sm" disabled={busyId === ev.id} onClick={() => approve(ev)}>Approve</Btn>
+              <Btn size="sm" variant="ghost" disabled={busyId === ev.id} onClick={() => setRejecting(ev)} className="!text-[#B3093C]">Reject</Btn>
             </div>
           );
         }
@@ -120,14 +130,14 @@ export default function Events() {
                 value={ev.ownership || 'OBS'}
                 disabled={busyId === ev.id}
                 onChange={(e) => setOwnership(ev, e.target.value)}
-                className="h-8 rounded-md border border-line bg-white px-2 text-[12px] text-ink outline-none focus:border-brand"
+                className={`${selectCls} !h-8 !text-[12px]`}
                 aria-label="Ownership"
               >
                 <option value="OBS">OBS</option>
                 <option value="PARTNER">Partner</option>
               </select>
               <Btn size="sm" variant={ev.isFeatured ? 'outline' : 'ghost'} disabled={busyId === ev.id} onClick={() => toggleFeature(ev)}>
-                {ev.isFeatured ? 'Unfeature' : 'Feature'}
+                <AdminIcon.Star size={13} /> {ev.isFeatured ? 'Unfeature' : 'Feature'}
               </Btn>
             </div>
           );
@@ -153,6 +163,17 @@ export default function Events() {
       ) : (
         <Table columns={columns} rows={data.events} renderCell={renderCell} empty="No events here." />
       )}
+
+      <ReasonDialog
+        open={!!rejecting}
+        onClose={() => setRejecting(null)}
+        onSubmit={reject}
+        busy={busyId === rejecting?.id}
+        title={`Reject “${rejecting?.title || ''}”`}
+        subtitle="The organizer is emailed the reason and can edit + resubmit."
+        placeholder="e.g. The description is incomplete — please add an agenda and venue details."
+        confirmLabel="Reject event"
+      />
     </div>
   );
 }

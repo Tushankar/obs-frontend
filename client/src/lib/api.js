@@ -177,6 +177,13 @@ api.deleteCmsPage = (id) => unwrap(api.delete(`/admin/cms/${id}`));
 // Public CMS render (Phase 3.5)
 api.publicPage = (slug) => unwrap(api.get(`/pages/${slug}`)).then((d) => d.page);
 
+// Hero carousel (admin-managed site content)
+api.heroSlides = () => unwrap(api.get('/hero-slides')).then((d) => d.slides);
+api.adminHeroSlides = () => unwrap(api.get('/admin/hero-slides')).then((d) => d.slides);
+api.createHeroSlide = (body) => unwrap(api.post('/admin/hero-slides', body)).then((d) => d.slide);
+api.updateHeroSlide = (id, body) => unwrap(api.patch(`/admin/hero-slides/${id}`, body)).then((d) => d.slide);
+api.deleteHeroSlide = (id) => unwrap(api.delete(`/admin/hero-slides/${id}`));
+
 // Speakers (Phase 5.2)
 api.speakers = (params) => unwrap(api.get('/speakers', { params })).then((d) => d.speakers);
 api.speaker = (slug) => unwrap(api.get(`/speakers/${slug}`)); // { speaker, events }

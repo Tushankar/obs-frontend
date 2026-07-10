@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PageHead, Card, Pill, Table, SearchInput, Btn, Loading } from '../../components/portal/Kit';
+import { PageHead, Card, Pill, Table, SearchInput, Btn, Loading, ConfirmDialog } from '../../components/portal/Kit';
 import { useApp } from '../../context/AppContext';
 import api, { apiError } from '../../lib/api';
+import { AdminIcon } from '../../components/admin/AdminIcons';
 
 const CHAPTER_TYPES = ['GEO_COUNTRY', 'GEO_CITY', 'LEADERSHIP_COMMUNITY', 'BUSINESS_CAPITAL', 'INDUSTRY_PROFESSIONAL', 'STRATEGIC_EXPANSION'];
 const TYPE_LABEL = {
@@ -112,6 +113,8 @@ export default function Chapters() {
   const [type, setType] = useState('All');
   const [showAll, setShowAll] = useState(false);
   const [editor, setEditor] = useState(null); // null | {} | chapter
+  const [confirm, setConfirm] = useState(null); // chapter pending delete
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const load = () => api.adminChapters().then((d) => setChapters(Array.isArray(d) ? d : [])).catch((e) => { setChapters([]); pushToast(apiError(e), false); });
@@ -132,10 +135,12 @@ export default function Chapters() {
   });
   const rows = showAll ? filtered : filtered.slice(0, CAP);
 
-  const remove = async (c) => {
-    if (!window.confirm(`Delete chapter "${c.name}"?`)) return;
-    try { await api.deleteChapter(c.id); pushToast(`Deleted ${c.name}`); load(); }
+  const remove = async () => {
+    if (!confirm) return;
+    setBusy(true);
+    try { await api.deleteChapter(confirm.id); pushToast(`Deleted ${confirm.name}`); setConfirm(null); load(); }
     catch (e) { pushToast(apiError(e, 'Could not delete chapter'), false); }
+    finally { setBusy(false); }
   };
 
   const renderCell = (c, key) => {
@@ -152,9 +157,9 @@ export default function Chapters() {
     if (key === 'flagship') return c.isFlagship ? <Pill tone="green">★</Pill> : <span className="text-ink-faint">—</span>;
     if (key === 'events') return <span className="font-medium text-ink">{c.eventCount ?? 0}</span>;
     if (key === 'actions') return (
-      <div className="flex justify-end gap-2">
-        <Btn size="sm" variant="ghost" onClick={() => setEditor(c)}>Edit</Btn>
-        <Btn size="sm" variant="ghost" onClick={() => remove(c)}>Delete</Btn>
+      <div className="flex justify-end gap-1.5">
+        <Btn size="sm" variant="ghost" onClick={() => setEditor(c)}><AdminIcon.Edit size={13} /> Edit</Btn>
+        <Btn size="sm" variant="ghost" onClick={() => setConfirm(c)} className="!text-[#B3093C]"><AdminIcon.Trash size={13} /></Btn>
       </div>
     );
     return null;
@@ -179,6 +184,16 @@ export default function Chapters() {
         </div>
       )}
       {editor && <Editor initial={editor} pushToast={pushToast} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); load(); }} />}
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={remove}
+        busy={busy}
+        danger
+        title="Delete chapter"
+        body={`Delete “${confirm?.name}”? Events linked to it must be reassigned first — the API blocks the delete if it’s in use.`}
+        confirmLabel="Delete chapter"
+      />
     </div>
   );
 }

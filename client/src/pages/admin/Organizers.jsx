@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import api, { apiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import { PageHead, Table, Pill, statusTone, Btn, Tabs, Loading } from '../../components/portal/Kit';
+import ReasonDialog from '../../components/admin/ReasonDialog';
 
 const TABS = [
   ['PENDING', 'Pending'],
@@ -18,6 +19,7 @@ export default function Organizers() {
   const [tab, setTab] = useState('PENDING');
   const [orgs, setOrgs] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [rejecting, setRejecting] = useState(null); // organizer pending rejection
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -31,18 +33,26 @@ export default function Organizers() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function decide(action, o) {
+  async function approve(o) {
     setBusyId(o.id);
     try {
-      if (action === 'approve') {
-        await api.approveOrganizer(o.id);
-        pushToast(`Approved ${o.orgName}`);
-      } else {
-        const reason = window.prompt(`Reject "${o.orgName}"? Optional reason (emailed to the applicant):`, '');
-        if (reason === null) { setBusyId(null); return; } // cancelled the prompt
-        await api.rejectOrganizer(o.id, reason.trim() || undefined);
-        pushToast(`Rejected ${o.orgName}`);
-      }
+      await api.approveOrganizer(o.id);
+      pushToast(`Approved ${o.orgName}`);
+      load();
+    } catch (e) {
+      pushToast(apiError(e, 'Action failed'), false);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function reject(reason) {
+    const o = rejecting;
+    setBusyId(o.id);
+    try {
+      await api.rejectOrganizer(o.id, reason || undefined);
+      pushToast(`Rejected ${o.orgName}`);
+      setRejecting(null);
       load();
     } catch (e) {
       pushToast(apiError(e, 'Action failed'), false);
@@ -77,8 +87,8 @@ export default function Organizers() {
         if (o.status === 'PENDING') {
           return (
             <div className="flex justify-end gap-2">
-              <Btn size="sm" disabled={busyId === o.id} onClick={() => decide('approve', o)}>Approve</Btn>
-              <Btn size="sm" variant="danger" disabled={busyId === o.id} onClick={() => decide('reject', o)}>Reject</Btn>
+              <Btn size="sm" disabled={busyId === o.id} onClick={() => approve(o)}>Approve</Btn>
+              <Btn size="sm" variant="ghost" disabled={busyId === o.id} onClick={() => setRejecting(o)} className="!text-[#B3093C]">Reject</Btn>
             </div>
           );
         }
@@ -100,6 +110,19 @@ export default function Organizers() {
       ) : (
         <Table columns={columns} rows={orgs} renderCell={renderCell} empty="No organizer applications here." />
       )}
+
+      <ReasonDialog
+        open={!!rejecting}
+        onClose={() => setRejecting(null)}
+        onSubmit={reject}
+        busy={busyId === rejecting?.id}
+        required={false}
+        title={`Reject ${rejecting?.orgName || ''}`}
+        subtitle="The applicant is emailed about this decision."
+        label="Reason (optional)"
+        placeholder="e.g. We couldn’t verify the organization details."
+        confirmLabel="Reject application"
+      />
     </div>
   );
 }

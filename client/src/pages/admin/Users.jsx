@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { PageHead, Card, Pill, statusTone, Table, SearchInput, Btn, Loading } from '../../components/portal/Kit';
+import { PageHead, Card, Pill, statusTone, Table, SearchInput, Btn, Loading, ConfirmDialog, selectCls } from '../../components/portal/Kit';
 import { useApp } from '../../context/AppContext';
 import api, { apiError } from '../../lib/api';
 
 const ROLE_OPTIONS = ['', 'USER', 'ORGANIZER', 'ADMIN'];
 const STATUS_OPTIONS = ['', 'ACTIVE', 'SUSPENDED'];
-const selectCls = 'h-9 rounded-md border border-line bg-white px-3 text-[13px] text-ink outline-none transition focus:border-brand';
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
 const COLUMNS = [
@@ -25,6 +24,7 @@ export default function Users() {
   const [role, setRole] = useState('');
   const [status, setStatus] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [confirm, setConfirm] = useState(null); // { user, nextStatus }
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   useEffect(() => { const t = setTimeout(() => setDebounced(query.trim()), 300); return () => clearTimeout(t); }, [query]);
@@ -66,8 +66,9 @@ export default function Users() {
     if (key === 'action') {
       const suspended = u.status === 'SUSPENDED';
       return (
-        <Btn size="sm" variant={suspended ? 'ghost' : 'danger'} disabled={busyId === u.id}
-          onClick={() => patch(u, { status: suspended ? 'ACTIVE' : 'SUSPENDED' }, `${suspended ? 'Reactivated' : 'Suspended'} ${u.name}`)}>
+        <Btn size="sm" variant="ghost" disabled={busyId === u.id}
+          className={suspended ? '' : '!text-[#B3093C]'}
+          onClick={() => setConfirm({ user: u, nextStatus: suspended ? 'ACTIVE' : 'SUSPENDED' })}>
           {suspended ? 'Activate' : 'Suspend'}
         </Btn>
       );
@@ -90,6 +91,23 @@ export default function Users() {
         </div>
       </Card>
       {!data ? <Loading /> : <Table columns={COLUMNS} rows={data.users} renderCell={renderCell} empty="No users match your filters." />}
+
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        busy={busyId === confirm?.user?.id}
+        danger={confirm?.nextStatus === 'SUSPENDED'}
+        title={confirm?.nextStatus === 'SUSPENDED' ? `Suspend ${confirm?.user?.name}?` : `Reactivate ${confirm?.user?.name}?`}
+        body={confirm?.nextStatus === 'SUSPENDED'
+          ? 'A suspended user can’t sign in or book tickets until reactivated.'
+          : 'This user will be able to sign in and book tickets again.'}
+        confirmLabel={confirm?.nextStatus === 'SUSPENDED' ? 'Suspend user' : 'Reactivate'}
+        onConfirm={async () => {
+          const { user: u, nextStatus } = confirm;
+          await patch(u, { status: nextStatus }, `${nextStatus === 'SUSPENDED' ? 'Suspended' : 'Reactivated'} ${u.name}`);
+          setConfirm(null);
+        }}
+      />
     </div>
   );
 }

@@ -33,6 +33,7 @@ import articleAdminRoutes from './modules/articles/articles.admin.routes.js';
 import programRoutes from './modules/programs/programs.routes.js';
 import programAdminRoutes from './modules/programs/programs.admin.routes.js';
 import launchRoutes from './modules/events/launches.routes.js';
+import { heroPublicRoutes, heroAdminRoutes } from './modules/hero/hero.routes.js';
 import geoRoutes from './modules/geo/geo.routes.js';
 import paymentRoutes from './modules/payments/payments.routes.js';
 import webhookRoutes from './modules/payments/webhooks.routes.js';
@@ -91,6 +92,7 @@ export function createApp() {
   app.use('/api/v1/articles', articleRoutes);
   app.use('/api/v1/programs', programRoutes);
   app.use('/api/v1/launches', launchRoutes);
+  app.use('/api/v1/hero-slides', heroPublicRoutes);
   app.use('/api/v1/geo', geoRoutes);
   app.use('/api/v1/events', publicEventRoutes);
   app.use('/api/v1/tickets', ticketValidateRoutes);
@@ -110,6 +112,7 @@ export function createApp() {
   app.use('/api/v1/admin', sponsorAdminRoutes); // /admin/sponsors, /admin/partner-applications
   app.use('/api/v1/admin/articles', articleAdminRoutes);
   app.use('/api/v1/admin/programs', programAdminRoutes);
+  app.use('/api/v1/admin/hero-slides', heroAdminRoutes);
   app.use('/api/v1/admin', adminRoutes);
 
   app.use(notFound);

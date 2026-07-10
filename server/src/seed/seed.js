@@ -3,7 +3,7 @@ import { connectDB, disconnectDB } from '../config/db.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/slugify.js';
 import { buildChapters } from './chapters.data.js';
-import { Category, Chapter, CmsPage, User, OrganizerProfile, Event, Program, Speaker, Sponsor, Article } from '../models/index.js';
+import { Category, Chapter, CmsPage, User, OrganizerProfile, Event, Program, Speaker, Sponsor, Article, HeroSlide } from '../models/index.js';
 import { seedCurrentProgram } from '../modules/programs/programs.service.js';
 
 // Idempotent seed (build plan §13 Phase 0.2): admin user, 12 categories,
@@ -155,6 +155,22 @@ const SEED_ARTICLES = [
   { title: 'How founders should think about fundraising in 2026', type: 'ARTICLE', authorName: 'Aisha Rahman', excerpt: 'A practical playbook for early-stage founders.', content: '## Fundraising in 2026\n\nStart with the story, then the numbers.', tags: ['fundraising', 'founders'] },
 ];
 
+// Home hero carousel — default slides (admin-editable at /admin/hero). Images
+// ship in client/public so the URLs resolve from the site root. $setOnInsert
+// only, so admin edits survive a re-seed.
+const HERO_SLIDES = [
+  { title: 'One Business Season. 108 chapters.', subtitle: 'Discover summits, conferences and networking events across the global OBS network.', imageUrl: '/hero-summit.png', ctaText: 'Browse events', ctaLink: '/events', sortOrder: 1 },
+  { title: 'The 100 Days Program is here', subtitle: '100 consecutive days of business events — follow the season day by day.', imageUrl: '/herocarousel1.png', ctaText: 'View program', ctaLink: '/program', sortOrder: 2 },
+  { title: 'Host your event on OBS', subtitle: 'Publish, sell tickets, scan at the door and get paid securely via Stripe.', imageUrl: '/hero-events.png', ctaText: 'List your event', ctaLink: '/list-your-event', sortOrder: 3 },
+];
+
+async function seedHeroSlides() {
+  for (const s of HERO_SLIDES) {
+    await HeroSlide.updateOne({ title: s.title }, { $setOnInsert: { ...s, isActive: true } }, { upsert: true });
+  }
+  return HeroSlide.countDocuments();
+}
+
 async function seedContent() {
   for (const s of SEED_SPEAKERS) {
     await Speaker.updateOne({ slug: slugify(s.name) }, { $set: { ...s, slug: slugify(s.name) } }, { upsert: true });
@@ -183,6 +199,7 @@ async function seed() {
   const publishedEvents = await seedDemoEvents(demoProfile);
   const program = await seedCurrentProgram(); // §5.5 current 100 Days edition + 100 days
   const content = await seedContent(); // §5 speakers / sponsors / articles demo data
+  const heroSlides = await seedHeroSlides(); // home hero carousel (admin-editable)
 
   const admins = await User.countDocuments({ role: 'ADMIN' });
 
@@ -195,6 +212,7 @@ async function seed() {
   console.log(`  pub events : ${publishedEvents}`);
   console.log(`  program    : ${program.name} (${await Program.countDocuments()} edition(s))`);
   console.log(`  content    : ${content.speakers} speakers · ${content.sponsors} sponsors · ${content.articles} articles`);
+  console.log(`  hero       : ${heroSlides} slide(s)`);
 
   if (chapters !== 108 || categories !== 12) {
     console.warn(`\n[seed] WARNING: expected 108 chapters + 12 categories, got ${chapters} + ${categories}`);

@@ -2,9 +2,10 @@ import { useNavigate } from 'react-router-dom';
 
 const COLS = [
   ['Events', [['Browse events', '/events'], ['Webinars', '/webinars'], ['Summits', '/summits'], ['List your event', '/list-your-event']]],
-  ['Chapters', [['All chapters', '/chapters'], ['Start a chapter', '/help'], ['Chapter leaders', '/help'], ['Tier benefits', '/help']]],
-  ['Company', [['About OBS', '/about'], ['Careers', '/careers'], ['Press', '/about'], ['Partner with us', '/list-your-event']]],
-  ['Help', [['Help center', '/help'], ['FAQs', '/faqs'], ['Refund policy', '/refund-policy'], ['Terms of use', '/help']]],
+  ['Chapters', [['All chapters', '/chapters'], ['Start a chapter', '/chapters/create'], ['Chapter leaders', '/help'], ['Tier benefits', '/help']]],
+  ['Company', [['About OBS', '/about'], ['Careers', '/careers'], ['Press', '/news'], ['Partner with us', '/become-a-sponsor']]],
+  // Terms & privacy render from the admin-managed CMS (Admin → Site pages).
+  ['Help', [['Help center', '/help'], ['FAQs', '/faqs'], ['Refund policy', '/refund-policy'], ['Terms of use', '/terms'], ['Privacy policy', '/privacy']]],
 ];
 
 export default function Footer() {

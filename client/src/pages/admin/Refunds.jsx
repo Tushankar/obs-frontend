@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import api, { apiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import {
-  PageHead, Table, Pill, statusTone, Btn, Loading, formatPrice,
+  PageHead, Table, Pill, statusTone, Btn, Loading, formatPrice, Tabs,
 } from '../../components/portal/Kit';
+import ReasonDialog from '../../components/admin/ReasonDialog';
 
 const TABS = [
   { key: 'REQUESTED', label: 'Pending' },
@@ -28,6 +29,7 @@ export default function Refunds() {
   const [tab, setTab] = useState('REQUESTED');
   const [rows, setRows] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [rejecting, setRejecting] = useState(null); // refund pending rejection
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -50,14 +52,13 @@ export default function Refunds() {
     } finally { setBusyId(null); }
   };
 
-  const reject = async (row) => {
-    const notes = window.prompt(`Reject the refund for ${row.orderNumber}? Give a reason (required):`, '');
-    if (notes === null) return;
-    if (notes.trim().length < 3) { pushToast('Please enter a reason (min 3 characters)', false); return; }
+  const reject = async (notes) => {
+    const row = rejecting;
     setBusyId(row.id);
     try {
-      await api.rejectRefund(row.id, notes.trim());
+      await api.rejectRefund(row.id, notes);
       pushToast(`Refund rejected for ${row.orderNumber}`);
+      setRejecting(null);
       load();
     } catch (e) {
       pushToast(apiError(e, 'Could not reject refund'), false);
@@ -85,7 +86,7 @@ export default function Refunds() {
         return (
           <div className="flex gap-2">
             <Btn size="sm" variant="primary" disabled={busyId === row.id} onClick={() => approve(row)}>Approve</Btn>
-            <Btn size="sm" variant="danger" disabled={busyId === row.id} onClick={() => reject(row)}>Reject</Btn>
+            <Btn size="sm" variant="ghost" disabled={busyId === row.id} onClick={() => setRejecting(row)} className="!text-[#B3093C]">Reject</Btn>
           </div>
         );
       default:
@@ -96,17 +97,7 @@ export default function Refunds() {
   return (
     <div>
       <PageHead title="Refunds" subtitle="Approve requests to trigger the gateway refund; the webhook confirms the money." />
-      <div className="mb-4 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.key || 'all'}
-            onClick={() => setTab(t.key)}
-            className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition ${tab === t.key ? 'bg-brand text-white' : 'border border-line text-ink-soft hover:border-brand hover:text-brand'}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS.map((t) => [t.key, t.label])} active={tab} onChange={setTab} />
       {!rows ? (
         <Loading />
       ) : (
@@ -117,6 +108,18 @@ export default function Refunds() {
           empty="No refund requests here."
         />
       )}
+
+      <ReasonDialog
+        open={!!rejecting}
+        onClose={() => setRejecting(null)}
+        onSubmit={reject}
+        busy={busyId === rejecting?.id}
+        title={`Reject refund — ${rejecting?.orderNumber || ''}`}
+        subtitle="The order returns to PAID and the buyer sees these notes."
+        label="Notes"
+        placeholder="e.g. Outside the refund window per the event policy."
+        confirmLabel="Reject refund"
+      />
     </div>
   );
 }

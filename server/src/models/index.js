@@ -24,3 +24,4 @@ export { default as PartnerApplication } from './PartnerApplication.js';
 export { default as Article } from './Article.js';
 export { default as Program } from './Program.js';
 export { default as ProgramDay } from './ProgramDay.js';
+export { default as HeroSlide } from './HeroSlide.js';

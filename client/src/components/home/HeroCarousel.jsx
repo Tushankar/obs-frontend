@@ -1,46 +1,43 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import EvImage from '../common/EvImage';
 import { Icon } from '../common/Icon';
 
-/** Auto-playing infinite/circular center-mode hero carousel with peeking slides. */
+/**
+ * Auto-playing infinite center-mode hero carousel with peeking side slides
+ * (the original home hero look). Slides are ADMIN-MANAGED — created under
+ * Admin → Hero carousel and fetched from /hero-slides:
+ *   { id, title, subtitle, imageUrl, ctaText, ctaLink }
+ * Clicking a slide (or its button) follows ctaLink (internal route or https URL).
+ */
 export default function HeroCarousel({ slides, autoplay = true }) {
   const navigate = useNavigate();
   const n = slides.length;
 
-  // Extended slides for infinite loop with a buffer to prevent empty spaces on wide screens
+  // Extended slides for the infinite loop, with a buffer so wide screens never
+  // show an empty gap while looping.
   const buffer = 3;
   const extendedSlides = [];
   if (n > 0) {
-    for (let i = buffer; i > 0; i--) {
-      extendedSlides.push(slides[(n - (i % n) + n) % n]);
-    }
+    for (let i = buffer; i > 0; i--) extendedSlides.push(slides[(n - (i % n) + n) % n]);
     extendedSlides.push(...slides);
-    for (let i = 0; i < buffer; i++) {
-      extendedSlides.push(slides[i % n]);
-    }
+    for (let i = 0; i < buffer; i++) extendedSlides.push(slides[i % n]);
   }
 
   const [index, setIndex] = useState(buffer);
   const [isTransitioning, setIsTransitioning] = useState(true);
   const timer = useRef(null);
+  const hovering = useRef(false);
 
-  // Auto-play effect
   useEffect(() => {
-    if (!autoplay || n <= 1) return;
+    if (!autoplay || n <= 1) return undefined;
     timer.current = setInterval(() => {
-      handleNext();
+      if (!hovering.current) setIndex((prev) => prev + 1);
     }, 5000);
     return () => clearInterval(timer.current);
-  }, [autoplay, n, index]);
+  }, [autoplay, n]);
 
-  const handleNext = () => {
-    setIndex((prev) => prev + 1);
-  };
-
-  const handlePrev = () => {
-    setIndex((prev) => prev - 1);
-  };
+  const handleNext = () => setIndex((prev) => prev + 1);
+  const handlePrev = () => setIndex((prev) => prev - 1);
 
   const handleTransitionEnd = () => {
     if (index <= buffer - 1) {
@@ -54,20 +51,28 @@ export default function HeroCarousel({ slides, autoplay = true }) {
 
   useEffect(() => {
     if (!isTransitioning) {
-      // Force layout recalculation and re-enable transition in next frame
-      const raf = requestAnimationFrame(() => {
-        setIsTransitioning(true);
-      });
+      const raf = requestAnimationFrame(() => setIsTransitioning(true));
       return () => cancelAnimationFrame(raf);
     }
+    return undefined;
   }, [isTransitioning]);
 
-  // Map the current display index to active dot
+  const openSlide = useCallback((s) => {
+    if (!s.ctaLink) return;
+    if (/^https?:\/\//i.test(s.ctaLink)) window.open(s.ctaLink, '_blank', 'noopener');
+    else navigate(s.ctaLink);
+  }, [navigate]);
+
   const activeDot = (index - buffer + n * 10) % n;
 
   return (
-    <div className="hero-carousel-container relative w-full overflow-hidden py-3 bg-[#F5F5F5]">
-      {/* Slider Track */}
+    <div
+      className="hero-carousel-container relative w-full overflow-hidden bg-[#F5F5F5] py-3"
+      onMouseEnter={() => { hovering.current = true; }}
+      onMouseLeave={() => { hovering.current = false; }}
+      aria-roledescription="carousel"
+    >
+      {/* Slider track */}
       <div
         className="flex"
         onTransitionEnd={handleTransitionEnd}
@@ -78,82 +83,48 @@ export default function HeroCarousel({ slides, autoplay = true }) {
         }}
       >
         {extendedSlides.map((s, i) => {
-          // Slide is active if the current index matches this slide
           const isActive = index === i;
           return (
             <div
-              key={`${s.slug}-${i}`}
-              onClick={() => navigate(`/event/${s.slug}`)}
-              className={`relative shrink-0 cursor-pointer overflow-hidden rounded-[8px] shadow-md aspect-[16/6] md:aspect-[1240/310] transition-all duration-500 ${isActive ? 'brightness-100' : 'brightness-[0.45]'}`}
+              key={`${s.id}-${i}`}
+              onClick={() => openSlide(s)}
+              role={s.ctaLink ? 'link' : undefined}
+              className={`relative aspect-[16/6] shrink-0 overflow-hidden rounded-[8px] shadow-md transition-all duration-500 md:aspect-[1240/310] ${s.ctaLink ? 'cursor-pointer' : ''} ${isActive ? 'brightness-100' : 'brightness-[0.45]'}`}
               style={{ width: 'var(--slide-width)' }}
             >
-              {s.isCustomBanner ? (
-                <div className="w-full h-full flex bg-[#141A29]">
-                  {/* Left Side: Dark Content Area with Textured Business Background */}
-                  <div 
-                    className="relative w-[60%] md:w-[55%] h-full flex flex-col justify-center pl-8 md:pl-16 pr-6 md:pr-10 z-10 shrink-0"
-                    style={{
-                      backgroundImage: `linear-gradient(rgba(20, 26, 41, 0.90), rgba(20, 26, 41, 0.95)), url('https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=1200&auto=format&fit=crop')`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center left'
-                    }}
-                  >
-                    {/* Header Logo */}
-                    <div className="text-white/90 font-medium tracking-wide text-xs md:text-sm mb-1.5 md:mb-3 flex items-center gap-2">
-                      <span className="font-bold text-white bg-[#C99E25] px-1.5 py-0.5 rounded text-[10px] md:text-[11px] text-black shadow-sm">OBS</span> EVENTS
-                    </div>
-                    {/* Main Title */}
-                    <h2 className="text-xl md:text-[2.25rem] font-black text-white leading-tight mb-1 md:mb-1.5 uppercase tracking-wide">
-                      Business<br />Communities
-                    </h2>
-                    {/* Subtitle */}
-                    <p className="text-xs md:text-[1rem] text-white/90 mb-4 md:mb-7 flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
-                      <span className="text-[#E5C060] font-bold italic tracking-wide">CONNECT</span> 
-                      <span className="hidden md:inline text-white/50">|</span> 
-                      <span>Join the largest network</span>
-                    </p>
-                    {/* Secondary Text & Button */}
-                    <div className="flex flex-col items-start">
-                      <p className="text-[#E5C060] font-semibold text-xs md:text-sm mb-1.5 opacity-90 italic">Tickets Available!</p>
-                      <button className="bg-gold-gradient text-black font-extrabold uppercase text-[11px] md:text-[14px] px-6 py-2 md:px-8 md:py-3 rounded-full hover:brightness-110 hover:shadow-[0_0_15px_rgba(201,158,37,0.3)] transition shadow-lg border border-[#F3CD70]/30">
-                        Book Now
-                      </button>
-                    </div>
-                    <p className="text-white/40 text-[8px] md:text-[10px] mt-2 md:mt-3">*T&Cs Apply</p>
-
-                    {/* Jagged Edge SVG Mask */}
-                    <svg className="absolute right-0 top-0 h-full w-4 md:w-6 translate-x-[98%] text-[#141A29]" preserveAspectRatio="none" viewBox="0 0 10 100" fill="currentColor">
-                      <path d="M0,0 L0,100 L10,100 L0,97.5 L10,95 L0,92.5 L10,90 L0,87.5 L10,85 L0,82.5 L10,80 L0,77.5 L10,75 L0,72.5 L10,70 L0,67.5 L10,65 L0,62.5 L10,60 L0,57.5 L10,55 L0,52.5 L10,50 L0,47.5 L10,45 L0,42.5 L10,40 L0,37.5 L10,35 L0,32.5 L10,30 L0,27.5 L10,25 L0,22.5 L10,20 L0,17.5 L10,15 L0,12.5 L10,10 L0,7.5 L10,5 L0,2.5 L10,0 Z" />
-                    </svg>
+              <img src={s.imageUrl} alt={s.title} className="absolute inset-0 h-full w-full object-cover" loading={i === buffer ? 'eager' : 'lazy'} />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
+              <div className="relative z-[2] flex h-full flex-col justify-center pl-6 pr-6 md:pl-14">
+                <div className="max-w-[560px]">
+                  <div className="mb-1.5 flex items-center gap-2 text-[10px] font-medium tracking-wide text-white/90 md:mb-2.5 md:text-[12px]">
+                    <span className="rounded bg-[#C99E25] px-1.5 py-0.5 text-[9px] font-bold text-black shadow-sm md:text-[10px]">OBS</span> EVENTS
                   </div>
-
-                  {/* Right Side: The Photo */}
-                  <div className="relative w-[40%] md:w-[45%] h-full">
-                    {/* By setting object-position to right or center right, we hide any baked in text on the left of the image */}
-                    <img src={s.bannerUrl} alt="Business Communities" className="w-full h-full object-cover object-right md:object-center" />
-                    {/* Subtle gradient overlay to blend the jagged edge smoothly */}
-                    <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#141A29]/80 via-[#141A29]/20 to-transparent pointer-events-none"></div>
-                  </div>
+                  <h2 className="text-lg font-black uppercase leading-tight tracking-wide text-white md:text-[2rem]">{s.title}</h2>
+                  {s.subtitle && <p className="mt-1 line-clamp-2 text-[11px] text-white/85 md:mt-2 md:text-[15px]">{s.subtitle}</p>}
+                  {s.ctaText && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openSlide(s); }}
+                      className="mt-3 rounded-full border border-[#F3CD70]/30 bg-gold-gradient px-5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-black shadow-lg transition hover:brightness-110 md:mt-5 md:px-8 md:py-3 md:text-[13px]"
+                    >
+                      {s.ctaText}
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <EvImage seed={s.seed} url={s.bannerUrl} label={s.title} wmSize={120} bgClass={s.bgClass} />
-              )}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Navigation Indicators */}
+      {/* Dots */}
       {n > 1 && (
-        <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center gap-1.5 pointer-events-none">
-          <div className="flex gap-2 bg-black/20 px-2.5 py-1.5 rounded-full pointer-events-auto">
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex justify-center gap-1.5">
+          <div className="pointer-events-auto flex gap-2 rounded-full bg-black/20 px-2.5 py-1.5">
             {slides.map((_, i) => (
               <button
                 key={i}
-                onClick={() => {
-                  setIndex(i + 1);
-                }}
-                className={`h-2 w-2 rounded-full transition-all duration-300 ${activeDot === i ? 'bg-white scale-110' : 'bg-white/40'}`}
+                onClick={() => setIndex(i + buffer)}
+                className={`h-2 w-2 rounded-full transition-all duration-300 ${activeDot === i ? 'scale-110 bg-white' : 'bg-white/40'}`}
                 aria-label={`Go to slide ${i + 1}`}
               />
             ))}
@@ -161,27 +132,24 @@ export default function HeroCarousel({ slides, autoplay = true }) {
         </div>
       )}
 
-      {/* Side peeking overlays with navigation arrows (Desktop only) */}
+      {/* Side peeking overlays with navigation arrows (desktop) */}
       {n > 1 && (
         <>
-          {/* Left side click overlay */}
           <div
             onClick={handlePrev}
-            className="absolute left-0 top-0 bottom-0 z-10 cursor-pointer bg-transparent hidden md:flex items-center justify-end pr-4 text-white/70 hover:text-white transition-all duration-300"
+            className="absolute bottom-0 left-0 top-0 z-10 hidden cursor-pointer items-center justify-end bg-transparent pr-4 text-white/70 transition-all duration-300 hover:text-white md:flex"
             style={{ width: 'calc(50vw - (var(--slide-width) / 2))' }}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white shadow-pop hover:bg-black/70 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white shadow-pop transition-colors hover:bg-black/70">
               <Icon.ChevronLeft width={18} height={18} />
             </div>
           </div>
-
-          {/* Right side click overlay */}
           <div
             onClick={handleNext}
-            className="absolute right-0 top-0 bottom-0 z-10 cursor-pointer bg-transparent hidden md:flex items-center justify-start pl-4 text-white/70 hover:text-white transition-all duration-300"
+            className="absolute bottom-0 right-0 top-0 z-10 hidden cursor-pointer items-center justify-start bg-transparent pl-4 text-white/70 transition-all duration-300 hover:text-white md:flex"
             style={{ width: 'calc(50vw - (var(--slide-width) / 2))' }}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white shadow-pop hover:bg-black/70 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white shadow-pop transition-colors hover:bg-black/70">
               <Icon.ChevronRight width={18} height={18} />
             </div>
           </div>

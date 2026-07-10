@@ -69,6 +69,8 @@ import AdminCategories from './pages/admin/Categories';
 import AdminChapters from './pages/admin/Chapters';
 import AdminCms from './pages/admin/Cms';
 import AdminReports from './pages/admin/Reports';
+import AdminHero from './pages/admin/Hero';
+import CmsPublicPage from './pages/CmsPublicPage';
 
 export default function App() {
   const { authOpen, setAuthOpen } = useApp();
@@ -84,9 +86,27 @@ export default function App() {
     <>
       <AppLoader ready={ready} />
       <RouteProgress />
-      
+      <Toasts />
+
       <Routes>
         <Route path="/t/:token" element={<Validate />} />
+
+        {/* Admin panel — standalone chrome (no public navbar/footer) */}
+        <Route element={<RequireRole roles={['ADMIN']}><AdminLayout /></RequireRole>}>
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/organizers" element={<AdminOrganizers />} />
+          <Route path="/admin/events" element={<AdminEvents />} />
+          <Route path="/admin/refunds" element={<AdminRefunds />} />
+          <Route path="/admin/transactions" element={<AdminTransactions />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/categories" element={<AdminCategories />} />
+          <Route path="/admin/chapters" element={<AdminChapters />} />
+          <Route path="/admin/cms" element={<AdminCms />} />
+          <Route path="/admin/hero" element={<AdminHero />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+        </Route>
+
         <Route
           path="*"
           element={
@@ -120,27 +140,16 @@ export default function App() {
                     <Route path="/organizer/events/:id/checkin" element={<OrganizerCheckIn />} />
                   </Route>
 
-                  {/* Admin portal (ADMIN role only) */}
-                  <Route element={<RequireRole roles={['ADMIN']}><AdminLayout /></RequireRole>}>
-                    <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    <Route path="/admin/organizers" element={<AdminOrganizers />} />
-                    <Route path="/admin/events" element={<AdminEvents />} />
-                    <Route path="/admin/refunds" element={<AdminRefunds />} />
-                    <Route path="/admin/transactions" element={<AdminTransactions />} />
-                    <Route path="/admin/users" element={<AdminUsers />} />
-                    <Route path="/admin/categories" element={<AdminCategories />} />
-                    <Route path="/admin/chapters" element={<AdminChapters />} />
-                    <Route path="/admin/cms" element={<AdminCms />} />
-                    <Route path="/admin/reports" element={<AdminReports />} />
-                  </Route>
-                  
                   <Route path="/chapters" element={<Chapters />} />
                   <Route path="/chapters/:slug" element={<ChapterDetail />} />
                   <Route path="/organizers/:slug" element={<Organizer />} />
                   <Route path="/search" element={<SearchResults />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/careers" element={<Careers />} />
+                  {/* Admin-managed CMS pages (public render) */}
+                  <Route path="/terms" element={<CmsPublicPage slug="terms" />} />
+                  <Route path="/privacy" element={<CmsPublicPage slug="privacy" />} />
+                  <Route path="/pages/:slug" element={<CmsPublicPage />} />
                   <Route path="/list-your-event" element={<ListYourEvent />} />
                   <Route path="/faqs" element={<Faqs />} />
                   <Route path="/refund-policy" element={<RefundPolicy />} />

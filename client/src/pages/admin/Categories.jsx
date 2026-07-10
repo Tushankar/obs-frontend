@@ -1,90 +1,130 @@
 import { useEffect, useState } from 'react';
-import { PageHead, Card, Btn, Loading, EmptyState, Pill } from '../../components/portal/Kit';
+import { PageHead, Card, Btn, Loading, EmptyState, Pill, Modal, ConfirmDialog, Field, inputCls } from '../../components/portal/Kit';
 import { useApp } from '../../context/AppContext';
 import api, { apiError } from '../../lib/api';
+import { AdminIcon } from '../../components/admin/AdminIcons';
+
+function CategoryEditor({ initial, onClose, onSaved }) {
+  const { pushToast } = useApp();
+  const [form, setForm] = useState({ name: initial?.name || '', icon: initial?.icon || '' });
+  const [busy, setBusy] = useState(false);
+  const editing = !!initial?.id;
+
+  const save = async () => {
+    if (form.name.trim().length < 2) { pushToast('Enter a category name', false); return; }
+    setBusy(true);
+    try {
+      if (editing) await api.updateCategory(initial.id, { name: form.name.trim(), icon: form.icon.trim() });
+      else await api.createCategory({ name: form.name.trim(), icon: form.icon.trim() || undefined });
+      pushToast(editing ? 'Category updated' : 'Category added');
+      onSaved();
+    } catch (e) {
+      pushToast(apiError(e, 'Could not save category'), false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={editing ? 'Edit category' : 'New category'}
+      subtitle="Categories power browse filters and the event wizard."
+      width="max-w-md"
+      footer={
+        <>
+          <Btn variant="ghost" onClick={onClose} disabled={busy}>Cancel</Btn>
+          <Btn onClick={save} disabled={busy}>{busy ? 'Saving…' : editing ? 'Save changes' : 'Add category'}</Btn>
+        </>
+      }
+    >
+      <div className="grid grid-cols-[84px_1fr] gap-3">
+        <Field label="Icon" hint="Emoji">
+          <input value={form.icon} onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))} placeholder="🏷️" maxLength={4} className={`${inputCls} text-center`} />
+        </Field>
+        <Field label="Name">
+          <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Workshops" autoFocus className={inputCls} onKeyDown={(e) => e.key === 'Enter' && save()} />
+        </Field>
+      </div>
+    </Modal>
+  );
+}
 
 export default function Categories() {
   const { pushToast } = useApp();
   const [cats, setCats] = useState(null);
-  const [name, setName] = useState('');
-  const [icon, setIcon] = useState('');
+  const [editor, setEditor] = useState(null); // null | {} | category
+  const [confirm, setConfirm] = useState(null); // category pending delete
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const load = () => api.adminCategories().then(setCats).catch((e) => { setCats([]); pushToast(apiError(e), false); });
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-  const add = async () => {
-    if (name.trim().length < 2) { pushToast('Enter a category name', false); return; }
-    setBusy(true);
-    try { await api.createCategory({ name: name.trim(), icon: icon.trim() || undefined }); setName(''); setIcon(''); pushToast('Category added'); load(); }
-    catch (e) { pushToast(apiError(e, 'Could not add category'), false); }
-    finally { setBusy(false); }
-  };
-
-  const edit = async (c) => {
-    const newName = window.prompt('Category name:', c.name);
-    if (newName === null) return;
-    const newIcon = window.prompt('Icon (emoji, optional):', c.icon || '');
-    if (newIcon === null) return;
-    try { await api.updateCategory(c.id, { name: newName.trim(), icon: newIcon.trim() }); pushToast('Category updated'); load(); }
-    catch (e) { pushToast(apiError(e), false); }
-  };
-
   const toggle = async (c) => {
     try { await api.updateCategory(c.id, { isActive: !c.isActive }); load(); }
     catch (e) { pushToast(apiError(e), false); }
   };
 
-  const remove = async (c) => {
-    if (!window.confirm(`Delete "${c.name}"? This can't be undone.`)) return;
-    try { await api.deleteCategory(c.id); pushToast(`Deleted ${c.name}`); load(); }
-    catch (e) { pushToast(apiError(e, 'Could not delete category'), false); }
+  const remove = async () => {
+    if (!confirm) return;
+    setBusy(true);
+    try {
+      await api.deleteCategory(confirm.id);
+      pushToast(`Deleted ${confirm.name}`);
+      setConfirm(null);
+      load();
+    } catch (e) {
+      pushToast(apiError(e, 'Could not delete category'), false);
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (!cats) return <Loading />;
 
   return (
     <div>
-      <PageHead title="Categories" subtitle="Organize events into browsable buckets." />
-
-      <Card className="mb-5">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="block">
-            <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">Icon</span>
-            <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="🏷️" maxLength={4}
-              className="h-10 w-16 rounded-md border border-line bg-white px-3 text-center text-sm outline-none focus:border-brand" />
-          </label>
-          <label className="block flex-1 min-w-[180px]">
-            <span className="mb-1.5 block text-[12px] font-semibold text-ink-soft">Name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Workshops" onKeyDown={(e) => e.key === 'Enter' && add()}
-              className="h-10 w-full rounded-md border border-line bg-white px-3.5 text-sm outline-none focus:border-brand" />
-          </label>
-          <Btn onClick={add} disabled={busy}>Add category</Btn>
-        </div>
-      </Card>
+      <PageHead
+        title="Categories"
+        subtitle="Organize events into browsable buckets."
+        actions={<Btn onClick={() => setEditor({})}><AdminIcon.Plus size={15} /> New category</Btn>}
+      />
 
       {cats.length === 0 ? (
-        <EmptyState title="No categories yet." subtitle="Add one to get started." icon="🏷️" />
+        <EmptyState icon={<AdminIcon.Categories size={30} />} title="No categories yet" subtitle="Add one to get started." action={<Btn onClick={() => setEditor({})}><AdminIcon.Plus size={15} /> New category</Btn>} />
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {cats.map((c) => (
-            <Card key={c.id} className="flex flex-col">
+            <Card key={c.id} className="flex flex-col p-4">
               <div className="flex items-start justify-between">
-                <div className="text-[34px] leading-none">{c.icon || '🏷️'}</div>
+                <div className="text-[30px] leading-none">{c.icon || '🏷️'}</div>
                 {!c.isActive && <Pill tone="gray">Hidden</Pill>}
               </div>
-              <div className="mt-3 font-bold text-ink">{c.name}</div>
-              <div className="mt-0.5 text-[13px] text-ink-mute">/{c.slug}</div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Btn variant="ghost" size="sm" onClick={() => edit(c)}>Edit</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => toggle(c)}>{c.isActive ? 'Hide' : 'Show'}</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => remove(c)}>Delete</Btn>
+              <div className="mt-3 text-[14px] font-semibold text-[#1A1F36]">{c.name}</div>
+              <div className="mt-0.5 text-[12px] text-[#8792A2]">/{c.slug}</div>
+              <div className="mt-4 flex gap-1.5">
+                <Btn variant="ghost" size="sm" onClick={() => setEditor(c)}><AdminIcon.Edit size={13} /> Edit</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => toggle(c)}>{c.isActive ? <AdminIcon.EyeOff size={13} /> : <AdminIcon.Eye size={13} />} {c.isActive ? 'Hide' : 'Show'}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setConfirm(c)} className="!text-[#B3093C]"><AdminIcon.Trash size={13} /></Btn>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      {editor && <CategoryEditor initial={editor} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); load(); }} />}
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={remove}
+        busy={busy}
+        danger
+        title="Delete category"
+        body={`Delete “${confirm?.name}”? Events using it must be reassigned first — the API will block the delete if it’s in use.`}
+        confirmLabel="Delete category"
+      />
     </div>
   );
 }
