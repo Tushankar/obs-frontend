@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSpeaker } from '../../mock/api';
+import api from '../../lib/api';
 import EvImage from '../../components/common/EvImage';
-import EventCard from '../../components/common/EventCard';
-import { SkeletonGrid } from '../../components/common/Skeleton';
+import ApiEventCard from '../../components/common/ApiEventCard';
 
 export default function SpeakerProfile() {
   const { slug } = useParams();
@@ -15,10 +14,10 @@ export default function SpeakerProfile() {
   useEffect(() => {
     window.scrollTo(0, 0);
     setLoading(true);
-    getSpeaker(slug).then((data) => {
-      setSpeaker(data);
-      setLoading(false);
-    });
+    api.speaker(slug)
+      .then((data) => setSpeaker({ ...data.speaker, events: data.events || [] }))
+      .catch(() => setSpeaker(null))
+      .finally(() => setLoading(false));
   }, [slug]);
 
   if (loading) {
@@ -44,7 +43,7 @@ export default function SpeakerProfile() {
     );
   }
 
-  const bio = `${speaker.name} is a seasoned professional in the field of ${speaker.topics ? speaker.topics.join(', ') : 'technology and operations'}. Having spent over a decade leading operations and design thinking at ${speaker.company}, they provide practical playbooks, strategic execution guidelines, and leadership advice at obsidian events. They hold multiple advisory board seats and invest actively in early-stage SaaS, D2C, and tech ecosystems globally.`;
+  const bio = speaker.bio || `${speaker.name}${speaker.company ? ` of ${speaker.company}` : ''} speaks on ${speaker.topics?.length ? speaker.topics.join(', ') : 'business & leadership'} at OBS events.`;
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-12 pt-6">
@@ -155,7 +154,7 @@ export default function SpeakerProfile() {
           {speaker.events && speaker.events.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {speaker.events.map((e) => (
-                <EventCard key={e.id} event={e} />
+                <ApiEventCard key={e.id} event={e} />
               ))}
             </div>
           ) : (

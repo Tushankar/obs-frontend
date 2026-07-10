@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { Event, Category, Chapter, TicketType, Ticket } from '../../models/index.js';
+import { Event, Category, Chapter, TicketType, Ticket, Speaker } from '../../models/index.js';
 import { registrationsWorkbook } from '../../utils/xlsx.js';
 import { uniqueSlug } from '../../utils/slugify.js';
 import { presignPut, objectUrl } from '../../utils/s3.js';
@@ -50,14 +50,22 @@ function shapeEvent(e) {
 }
 
 // Validate any referenced category/chapter actually exist (when supplied).
-async function assertRefs({ categoryId, chapterId }) {
+async function assertRefs({ categoryId, chapterId, speakerIds }) {
   if (categoryId && !(await Category.exists({ _id: categoryId }))) {
     throw badRequest('INVALID_CATEGORY', 'Category not found');
   }
   if (chapterId && !(await Chapter.exists({ _id: chapterId }))) {
     throw badRequest('INVALID_CHAPTER', 'Chapter not found');
   }
+  if (speakerIds?.length) {
+    const found = await Speaker.countDocuments({ _id: { $in: speakerIds } });
+    if (found !== new Set(speakerIds.map(String)).size) throw badRequest('INVALID_SPEAKER', 'One or more speakers not found');
+  }
 }
+
+// Fields safe to edit AFTER an event is published (additive metadata, not the
+// contract with buyers). Editing only these bypasses the DRAFT/REJECTED gate.
+const POST_PUBLISH_FIELDS = ['speakerIds'];
 
 // Load an event and verify the caller's organizer profile owns it. Exported so
 // the ticket-type / promo-code services can enforce the same ownership guard.
@@ -105,7 +113,8 @@ export async function getMyEvent(organizerId, id) {
 
 export async function updateEvent(organizerId, id, body) {
   const event = await loadOwnedEvent(organizerId, id);
-  if (!EDITABLE.includes(event.status)) {
+  const onlyPostPublish = Object.keys(body).every((k) => POST_PUBLISH_FIELDS.includes(k));
+  if (!EDITABLE.includes(event.status) && !onlyPostPublish) {
     throw conflict('EVENT_NOT_EDITABLE', `A ${event.status} event can't be edited`);
   }
   await assertRefs(body);
@@ -368,12 +377,16 @@ export async function getPublicEventBySlug(slug) {
   const event = await Event.findOne({ slug, status: { $in: VIEWABLE } })
     .populate('categoryId', 'name slug')
     .populate('chapterId', 'name slug flagEmoji type tier')
-    .populate('organizerId', 'orgName slug logoUrl bio website');
+    .populate('organizerId', 'orgName slug logoUrl bio website')
+    .populate('speakerIds', 'name slug photoUrl title company'); // §5.2 Speakers block
   if (!event) throw notFoundError('EVENT_NOT_FOUND', 'Event not found');
   // Best-effort view counter (don't block the response).
   Event.updateOne({ _id: event._id }, { $inc: { viewsCount: 1 } }).catch(() => {});
   const ticketTypes = await TicketType.find({ eventId: event._id, isActive: true }).sort({ price: 1, createdAt: 1 });
-  return { ...publicEventFull(event), ticketTypes: ticketTypes.map(publicTicketType) };
+  const speakers = (event.speakerIds || []).filter((s) => s && s._id).map((s) => ({
+    id: String(s._id), name: s.name, slug: s.slug, photoUrl: s.photoUrl || null, title: s.title || null, company: s.company || null,
+  }));
+  return { ...publicEventFull(event), speakers, ticketTypes: ticketTypes.map(publicTicketType) };
 }
 
 // Next 4 upcoming published events sharing the category or chapter.

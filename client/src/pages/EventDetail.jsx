@@ -134,6 +134,23 @@ export default function EventDetail() {
             )}
           </div>
 
+          {event.speakers?.length > 0 && (
+            <>
+              <h2 className="mb-4 mt-8 text-lg font-bold text-ink">Speakers</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {event.speakers.map((s) => (
+                  <button key={s.id} onClick={() => navigate(`/speakers/${s.slug}`)} className="flex flex-col items-center rounded-xl border border-line p-3 text-center transition hover:-translate-y-0.5 hover:border-brand hover:shadow-panel">
+                    <span className="relative h-16 w-16 overflow-hidden rounded-full bg-surface">
+                      {s.photoUrl && <img src={s.photoUrl} alt={s.name} className="absolute inset-0 h-full w-full object-cover" />}
+                    </span>
+                    <span className="mt-2 line-clamp-1 text-sm font-semibold text-ink">{s.name}</span>
+                    {(s.title || s.company) && <span className="mt-0.5 line-clamp-1 text-[11px] text-ink-mute">{[s.title, s.company].filter(Boolean).join(', ')}</span>}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
           {event.organizer && (
             <>
               <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Organizer</h2>

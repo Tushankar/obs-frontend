@@ -35,6 +35,7 @@ export default function Home() {
   const [recent, setRecent] = useState(null);
   const [cats, setCats] = useState([]);
   const [chapters, setChapters] = useState([]);
+  const [speakers, setSpeakers] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -42,6 +43,7 @@ export default function Home() {
     api.listEvents({ sort: 'newest', limit: 8 }).then((d) => setRecent(d.events)).catch(() => setRecent([]));
     api.categories().then(setCats).catch(() => {});
     api.chapters().then(setChapters).catch(() => {});
+    api.speakers().then((d) => setSpeakers((d || []).slice(0, 10))).catch(() => {});
   }, []);
 
   const spotlight = [...chapters].filter((c) => c.isFlagship).slice(0, 8);
@@ -82,6 +84,27 @@ export default function Home() {
 
       <Rail title="Happening soon" events={soon} seeAllTo="/events" navigate={navigate} />
       <Rail title="Recently added" events={recent} seeAllTo="/events?sort=newest" navigate={navigate} empty="No new events yet." />
+
+      {/* Featured speakers rail (§5.2) */}
+      {speakers.length > 0 && (
+        <section className="mx-auto max-w-container px-4 pt-10 sm:px-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-ink">Speakers</h2>
+            <button onClick={() => navigate('/speakers')} className="text-[13px] font-semibold text-brand hover:underline">See all ›</button>
+          </div>
+          <div className="no-scrollbar flex gap-4 overflow-x-auto pb-1">
+            {speakers.map((s) => (
+              <button key={s.id} onClick={() => navigate(`/speakers/${s.slug}`)} className="w-[116px] shrink-0 text-center">
+                <span className="relative mx-auto block h-20 w-20 overflow-hidden rounded-full bg-surface ring-1 ring-line">
+                  {s.photoUrl && <img src={s.photoUrl} alt={s.name} className="absolute inset-0 h-full w-full object-cover" />}
+                </span>
+                <span className="mt-2 block truncate text-sm font-semibold text-ink">{s.name}</span>
+                <span className="block truncate text-[11px] text-ink-mute">{s.company || s.title || ''}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Chapter spotlight */}
       <section className="mx-auto max-w-container px-4 pt-10 sm:px-6">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getSpeakers } from '../../mock/api';
+import api from '../../lib/api';
 import SpeakerCard from '../../components/cards/SpeakerCard';
 import { SkeletonGrid } from '../../components/common/Skeleton';
 import { Icon } from '../../components/common/Icon';
@@ -27,13 +27,13 @@ export default function SpeakersDirectory() {
   const fetchFilteredSpeakers = (q, t) => {
     setLoading(true);
     const params = {};
-    if (q) params.search = q;
+    if (q) params.q = q;
     if (t && t !== 'All') params.topic = t;
-    
-    getSpeakers(params).then((data) => {
-      setSpeakers(data);
-      setLoading(false);
-    });
+
+    api.speakers(params)
+      .then((data) => setSpeakers(Array.isArray(data) ? data : []))
+      .catch(() => setSpeakers([]))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function SpeakersDirectory() {
         ) : speakers.length > 0 ? (
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {speakers.map((s) => (
-              <SpeakerCard key={s._id} speaker={s} />
+              <SpeakerCard key={s.id} speaker={s} />
             ))}
           </div>
         ) : (

@@ -25,6 +25,8 @@ const eventShape = {
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
   bannerUrl: z.string().trim().max(1000),
+  // §5.2 — organizers attach speakers to their own events.
+  speakerIds: z.array(objectId).max(50),
 };
 
 const eventObject = z.object(eventShape);

@@ -175,6 +175,14 @@ api.deleteCmsPage = (id) => unwrap(api.delete(`/admin/cms/${id}`));
 // Public CMS render (Phase 3.5)
 api.publicPage = (slug) => unwrap(api.get(`/pages/${slug}`)).then((d) => d.page);
 
+// Speakers (Phase 5.2)
+api.speakers = (params) => unwrap(api.get('/speakers', { params })).then((d) => d.speakers);
+api.speaker = (slug) => unwrap(api.get(`/speakers/${slug}`)); // { speaker, events }
+api.adminSpeakers = () => unwrap(api.get('/admin/speakers')).then((d) => d.speakers);
+api.createSpeaker = (body) => unwrap(api.post('/admin/speakers', body)).then((d) => d.speaker);
+api.updateSpeaker = (id, body) => unwrap(api.patch(`/admin/speakers/${id}`, body)).then((d) => d.speaker);
+api.deleteSpeaker = (id) => unwrap(api.delete(`/admin/speakers/${id}`));
+
 // Admin — reports (Phase 4.1)
 api.reportsSummary = () => unwrap(api.get('/admin/reports/summary')).then((d) => d.summary);
 api.reportsMonthly = (year) => unwrap(api.get('/admin/reports/monthly', { params: year ? { year } : {} })).then((d) => d.monthly);

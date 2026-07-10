@@ -1,7 +1,5 @@
-// Barrel export for all Mongoose models (§5 core). Importing this file
-// registers every model with mongoose. §5.1 community collections
-// (Sponsor, PartnerApplication, Speaker, Article, Program, ProgramDay) are
-// added here in Phase 5.
+// Barrel export for all Mongoose models (§5 core + §5.1 community). Importing
+// this file registers every model with mongoose.
 export { default as User } from './User.js';
 export { default as OrganizerProfile } from './OrganizerProfile.js';
 export { default as Chapter } from './Chapter.js';
@@ -19,3 +17,5 @@ export { default as CmsPage } from './CmsPage.js';
 export { default as AuditLog } from './AuditLog.js';
 export { default as Counter } from './Counter.js';
 export { default as Session } from './Session.js';
+// §5.1 community & content collections (Phase 5)
+export { default as Speaker } from './Speaker.js';

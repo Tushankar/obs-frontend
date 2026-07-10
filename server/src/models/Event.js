@@ -1,11 +1,10 @@
 import mongoose from 'mongoose';
-import { EVENT_STATUS } from '../constants.js';
+import { EVENT_STATUS, EVENT_OWNERSHIP } from '../constants.js';
 
 const { Schema } = mongoose;
 
-// Core Event schema (§5). The §5.1 additions (ownership / isLaunch / launchAt /
-// programId / programDayNumber / speakerIds) are added in Phase 5 alongside the
-// community collections they reference.
+// Core Event schema (§5) + §5.1 community additions (ownership / isLaunch /
+// launchAt / programId / programDayNumber / speakerIds), added in Phase 5.
 //
 // Draft-first note (Phase 1.2): the wizard (§10) saves a draft per step, so an
 // event is created before venue/schedule/category exist. `categoryId`,
@@ -40,6 +39,13 @@ const eventSchema = new Schema(
     viewsCount: { type: Number, default: 0 },
     reminderSentAt: Date,
     publishedAt: Date,
+    // §5.1 community & content layer (Phase 5)
+    ownership: { type: String, enum: EVENT_OWNERSHIP, default: 'OBS' }, // OBS vs Partner event
+    isLaunch: { type: Boolean, default: false }, // shows on the Launchpad
+    launchAt: Date, // optional countdown target
+    programId: { type: Schema.Types.ObjectId, ref: 'Program' }, // part of a 100 Days edition
+    programDayNumber: Number, // 1..100 within that edition
+    speakerIds: [{ type: Schema.Types.ObjectId, ref: 'Speaker' }], // speakers at this event
   },
   { timestamps: true }
 );
@@ -48,6 +54,9 @@ eventSchema.index({ status: 1, startAt: 1 });
 eventSchema.index({ city: 1 });
 eventSchema.index({ categoryId: 1 });
 eventSchema.index({ chapterId: 1 });
+eventSchema.index({ ownership: 1, status: 1 }); // /events ?owner tabs
+eventSchema.index({ isLaunch: 1, launchAt: 1 }); // /launches
+eventSchema.index({ programId: 1, programDayNumber: 1 }); // program day agenda
 eventSchema.index({ title: 'text', description: 'text' }); // powers ?q= search
 
 export default mongoose.model('Event', eventSchema);
