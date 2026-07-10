@@ -1,24 +1,33 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProgramDay } from '../../mock/api';
-import EventCard from '../../components/common/EventCard';
+import api from '../../lib/api';
+import ApiEventCard from '../../components/common/ApiEventCard';
 import { SkeletonGrid } from '../../components/common/Skeleton';
 import { Icon } from '../../components/common/Icon';
+
+const fmtDay = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
 export default function ProgramDay() {
   const { n } = useParams();
   const navigate = useNavigate();
+  const [slug, setSlug] = useState(null);
   const [dayData, setDayData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState('All');
 
+  // Resolve the current edition's slug once (the route only carries the day n).
   useEffect(() => {
+    api.currentProgram().then((p) => setSlug(p?.slug || null)).catch(() => setSlug(null));
+  }, []);
+
+  useEffect(() => {
+    if (!slug) return;
     setLoading(true);
-    getProgramDay(n, country).then((data) => {
-      setDayData(data);
-      setLoading(false);
-    });
-  }, [n, country]);
+    api.programDay(slug, n, country === 'All' ? undefined : { country })
+      .then((data) => setDayData(data))
+      .catch(() => setDayData(null))
+      .finally(() => setLoading(false));
+  }, [slug, n, country]);
 
   const countries = [
     { name: 'All', flag: '🌍' },
@@ -58,11 +67,11 @@ export default function ProgramDay() {
                   Day {n} of 100
                 </span>
                 <span className="text-sm font-bold text-ink-mute">
-                  {dayData?.date}
+                  {fmtDay(dayData?.day?.date)}
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-ink mt-2">
-                {dayData?.theme || 'Day Agenda'}
+                {dayData?.day?.theme || dayData?.day?.title || 'Day agenda'}
               </h1>
             </div>
 
@@ -115,7 +124,7 @@ export default function ProgramDay() {
         ) : dayData?.events && dayData.events.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {dayData.events.map((e) => (
-              <EventCard key={e.id} event={e} />
+              <ApiEventCard key={e.id} event={e} />
             ))}
           </div>
         ) : (

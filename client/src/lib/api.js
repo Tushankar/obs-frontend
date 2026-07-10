@@ -202,6 +202,17 @@ api.createArticle = (body) => unwrap(api.post('/admin/articles', body)).then((d)
 api.updateArticle = (id, body) => unwrap(api.patch(`/admin/articles/${id}`, body)).then((d) => d.article);
 api.deleteArticle = (id) => unwrap(api.delete(`/admin/articles/${id}`));
 
+// 100 Days Program (Phase 5.5)
+api.currentProgram = () => unwrap(api.get('/programs/current')).then((d) => d.program);
+api.program = (slug) => unwrap(api.get(`/programs/${slug}`)); // { program, days }
+api.programDay = (slug, n, params) => unwrap(api.get(`/programs/${slug}/days/${n}`, { params })); // { program, day, events }
+api.adminPrograms = () => unwrap(api.get('/admin/programs')).then((d) => d.programs);
+api.createProgram = (body) => unwrap(api.post('/admin/programs', body)).then((d) => d.program);
+api.updateProgram = (id, body) => unwrap(api.patch(`/admin/programs/${id}`, body)).then((d) => d.program);
+api.deleteProgram = (id) => unwrap(api.delete(`/admin/programs/${id}`));
+api.programDaysAdmin = (id) => unwrap(api.get(`/admin/programs/${id}/days`)).then((d) => d.days);
+api.updateProgramDay = (id, n, body) => unwrap(api.patch(`/admin/programs/${id}/days/${n}`, body)).then((d) => d.day);
+
 // Admin — reports (Phase 4.1)
 api.reportsSummary = () => unwrap(api.get('/admin/reports/summary')).then((d) => d.summary);
 api.reportsMonthly = (year) => unwrap(api.get('/admin/reports/monthly', { params: year ? { year } : {} })).then((d) => d.monthly);

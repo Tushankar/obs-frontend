@@ -1,233 +1,146 @@
 import { useState, useEffect, useRef } from 'react';
-import { getProgram } from '../../mock/api';
-import MiniEventCard from '../../components/cards/MiniEventCard';
-import { SkeletonRail } from '../../components/common/Skeleton';
 import { useNavigate } from 'react-router-dom';
+import api from '../../lib/api';
+import Seo from '../../components/common/Seo';
+
+const fmtDay = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '');
+
+function seasonLabel(season) {
+  if (!season) return '';
+  if (season.phase === 'UPCOMING') return `Starts in ${season.daysUntil} day${season.daysUntil === 1 ? '' : 's'}`;
+  if (season.phase === 'ACTIVE') return `Day ${season.dayOfSeason} of ${season.totalDays}`;
+  return 'Season ended';
+}
 
 export default function ProgramOverview() {
   const navigate = useNavigate();
   const [program, setProgram] = useState(null);
+  const [days, setDays] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [countryFilter, setCountryFilter] = useState('All');
-  const [visibleLimit, setVisibleLimit] = useState(20);
-  const agendaRefs = useRef({});
+  const [country, setCountry] = useState('All');
+  const [visible, setVisible] = useState(20);
+  const dayRefs = useRef({});
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    getProgram().then((data) => {
-      setProgram(data);
-      setLoading(false);
-    });
+    api.currentProgram()
+      .then((p) => {
+        if (!p) { setLoading(false); return null; }
+        return api.program(p.slug).then((full) => { setProgram(full.program); setDays(full.days || []); });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
       <div className="mx-auto max-w-container px-4 py-8 sm:px-6">
-        <div className="skeleton h-[200px] w-full rounded-xl mb-8" />
-        <div className="skeleton h-10 w-64 rounded mb-6" />
+        <div className="skeleton mb-8 h-[200px] w-full rounded-xl" />
+        <div className="skeleton mb-6 h-10 w-64 rounded" />
         <div className="skeleton h-64 w-full rounded" />
       </div>
     );
   }
 
-  // Country flags map
-  const countries = [
-    { name: 'All', flag: '🌍' },
-    { name: 'India', flag: '🇮🇳' },
-    { name: 'UAE', flag: '🇦🇪' },
-    { name: 'Singapore', flag: '🇸🇬' },
-    { name: 'USA', flag: '🇺🇸' },
-    { name: 'UK', flag: '🇬🇧' }
-  ];
+  if (!program) {
+    return (
+      <div className="mx-auto max-w-container px-6 py-20 text-center text-ink-mute">
+        No 100 Days edition is scheduled yet. <button onClick={() => navigate('/events')} className="text-brand underline">Browse events</button>
+      </div>
+    );
+  }
 
-  // Helper to filter events inside the day rows
-  const getFilteredEventsForDay = (dayNum) => {
-    // sprinkle events across ~40 days
-    // Let's grab events from event list that belong to this day
-    const allEvents = [
-      { id: 1, title: 'OBS India Investor Summit 2026', city: 'Mumbai', slug: 'obs-india-investor-summit-2026', programDayNumber: 12, chapter: { flag: '🇮🇳' } },
-      { id: 2, title: 'Founders Networking Night', city: 'Bengaluru', slug: 'founders-networking-night', programDayNumber: 1, chapter: { flag: '🇮🇳' } },
-      { id: 4, title: 'Scale-Up Playbook Workshop', city: 'Delhi NCR', slug: 'scale-up-playbook-workshop', programDayNumber: 6, chapter: { flag: '🇮🇳' } },
-      { id: 9, title: 'Startup Pitch Arena', city: 'Mumbai', slug: 'startup-pitch-arena', programDayNumber: 11, chapter: { flag: '🇮🇳' } },
-      { id: 12, title: 'OBS Global Leadership Conference', city: 'Singapore', slug: 'obs-global-leadership-conference', programDayNumber: 42, chapter: { flag: '🇸🇬' } }
-    ];
+  const countries = [{ name: 'All', flag: '🌍' }, { name: 'India', flag: '🇮🇳' }, { name: 'UAE', flag: '🇦🇪' }, { name: 'Singapore', flag: '🇸🇬' }, { name: 'USA', flag: '🇺🇸' }, { name: 'UK', flag: '🇬🇧' }];
+  const todayNum = program.season?.phase === 'ACTIVE' ? program.season.dayOfSeason : null;
+  const progressPct = todayNum ? Math.round((todayNum / (program.season.totalDays || 100)) * 100) : 0;
+  const eventsForDay = (day) => (country === 'All' ? day.events : day.events.filter((e) => e.country === country));
 
-    // dynamically generate others to make it look full (sprinkling across ~40 days)
-    // we can generate a consistent set
-    const daySeed = (dayNum * 17) % 100;
-    if (daySeed < 40 && dayNum !== 12 && dayNum !== 1 && dayNum !== 6 && dayNum !== 11 && dayNum !== 42) {
-      const citiesList = ['Mumbai', 'Delhi NCR', 'Dubai', 'London', 'Singapore', 'New York'];
-      const city = citiesList[dayNum % citiesList.length];
-      const flagMap = { Mumbai: '🇮🇳', 'Delhi NCR': '🇮🇳', Dubai: '🇦🇪', London: '🇬🇧', Singapore: '🇸🇬', 'New York': '🇺🇸' };
-      allEvents.push({
-        id: 100 + dayNum,
-        title: `OBS Day ${dayNum} Special Session`,
-        city,
-        slug: `obs-day-${dayNum}-special-session`,
-        programDayNumber: dayNum,
-        chapter: { flag: flagMap[city] || '🌐' }
-      });
-    }
-
-    let results = allEvents.filter(e => e.programDayNumber === dayNum);
-    if (countryFilter !== 'All') {
-      results = results.filter(e => {
-        const flagMap = { India: '🇮🇳', UAE: '🇦🇪', Singapore: '🇸🇬', USA: '🇺🇸', UK: '🇬🇧' };
-        return e.chapter.flag === flagMap[countryFilter];
-      });
-    }
-    return results;
-  };
-
-  const scrollToDay = (dayNum) => {
-    agendaRefs.current[dayNum]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    if (dayNum > visibleLimit) {
-      setVisibleLimit(Math.min(100, dayNum + 10));
-    }
+  const scrollToDay = (n) => {
+    if (n > visible) setVisible(Math.min(100, n + 10));
+    setTimeout(() => dayRefs.current[n]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   };
 
   return (
-    <div className="pb-12 bg-[#F5F5F5]">
-      {/* Hero Band */}
+    <div className="bg-[#F5F5F5] pb-12">
+      <Seo title="100 Days Program" description={program.description || '100 days of business events across the OBS network.'} />
       <div className="relative overflow-hidden bg-gold-gradient py-12 text-white shadow-sm">
-        <div className="mx-auto max-w-container px-4 sm:px-6 flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
+        <div className="relative z-10 mx-auto flex max-w-container flex-col px-4 sm:px-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <span className="rounded bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider">
-              15 October → 22 January
+            <span className="rounded bg-white/20 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider backdrop-blur-md">
+              {fmtDay(program.startAt)} → {fmtDay(program.endAt)}
             </span>
-            <h1 className="mt-3 text-3xl font-black sm:text-4xl lg:text-[42px] leading-none">
-              OBS 100 Days Program
-            </h1>
-            <p className="mt-2.5 max-w-xl text-sm text-white/90 leading-relaxed">
-              100 consecutive days of business summits, masterclasses, networking nights, and launches across the global OBS network.
-            </p>
+            <h1 className="mt-3 text-3xl font-black leading-none sm:text-4xl lg:text-[42px]">{program.name}</h1>
+            <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-white/90">{program.description || '100 consecutive days of summits, masterclasses, networking nights and launches across the global OBS network.'}</p>
           </div>
-
-          <div className="mt-6 md:mt-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-5 md:w-80">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-white/80">Season Status</div>
-            <div className="text-xl font-bold mt-1">{program.seasonStatus}</div>
-            
-            {/* Slim progress bar */}
-            {program.currentDay && (
+          <div className="mt-6 rounded-xl border border-white/20 bg-white/10 p-5 backdrop-blur-md md:mt-0 md:w-80">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-white/80">Season status</div>
+            <div className="mt-1 text-xl font-bold">{seasonLabel(program.season)}</div>
+            {todayNum && (
               <div className="mt-3">
-                <div className="h-1.5 w-full rounded-full bg-white/20 overflow-hidden">
-                  <div 
-                    className="h-full bg-white rounded-full transition-all duration-300"
-                    style={{ width: `${program.progressPct}%` }}
-                  />
-                </div>
-                <div className="mt-1 text-[10px] text-right text-white/70 font-semibold">{program.progressPct}% Complete</div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-white transition-all" style={{ width: `${progressPct}%` }} /></div>
+                <div className="mt-1 text-right text-[10px] font-semibold text-white/70">{progressPct}% complete</div>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-container px-4 pt-8 sm:px-6 grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8 items-start">
-        {/* Main Content Area */}
+      <div className="mx-auto grid max-w-container grid-cols-1 items-start gap-8 px-4 pt-8 sm:px-6 lg:grid-cols-[1fr_260px]">
         <div>
-          {/* Country filter chips */}
-          <div className="flex flex-wrap items-center gap-2 mb-6 bg-white border border-line p-3 rounded-lg shadow-sm">
-            <span className="text-xs font-bold text-ink-mute uppercase mr-1">Filter by Country:</span>
+          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-white p-3 shadow-sm">
+            <span className="mr-1 text-xs font-bold uppercase text-ink-mute">Filter by country:</span>
             {countries.map((c) => (
-              <button
-                key={c.name}
-                onClick={() => setCountryFilter(c.name)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  countryFilter === c.name
-                    ? 'border-brand bg-brand-soft text-brand'
-                    : 'border-line bg-surface text-ink-soft hover:bg-neutral-100'
-                }`}
-              >
-                <span>{c.flag}</span>
-                <span>{c.name}</span>
+              <button key={c.name} onClick={() => setCountry(c.name)} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${country === c.name ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-surface text-ink-soft hover:bg-neutral-100'}`}>
+                <span>{c.flag}</span><span>{c.name}</span>
               </button>
             ))}
           </div>
 
-          {/* Day-by-Day Agenda */}
           <div className="flex flex-col gap-4">
-            {program.days.slice(0, visibleLimit).map((day) => {
-              const events = getFilteredEventsForDay(day.dayNumber);
-              const isToday = day.dayNumber === 42; // let's mock today as Day 42
-
+            {days.slice(0, visible).map((day) => {
+              const evs = eventsForDay(day);
+              const isToday = day.dayNumber === todayNum;
               return (
-                <div
-                  key={day.dayNumber}
-                  ref={(el) => (agendaRefs.current[day.dayNumber] = el)}
-                  className={`rounded-xl border bg-white p-5 shadow-sm transition-all duration-200 ${
-                    isToday 
-                      ? 'border-[#C99E25] border-l-[6px] shadow-md' 
-                      : 'border-line hover:border-brand'
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line pb-3">
+                <div key={day.dayNumber} ref={(el) => (dayRefs.current[day.dayNumber] = el)} className={`rounded-xl border bg-white p-5 shadow-sm transition ${isToday ? 'border-l-[6px] border-[#C99E25] shadow-md' : 'border-line'}`}>
+                  <div className="flex flex-col gap-2 border-b border-line pb-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className={`text-[12px] font-extrabold uppercase px-2 py-0.5 rounded ${
-                        isToday ? 'bg-[#C99E25] text-white' : 'bg-surface text-ink-soft'
-                      }`}>
-                        Day {day.dayNumber}
-                      </span>
-                      <span className="text-xs text-ink-mute font-bold">{day.date}</span>
-                      {isToday && (
-                        <span className="text-[10px] font-black uppercase text-[#C99E25] tracking-wider animate-pulse">
-                          ● Today
-                        </span>
-                      )}
+                      <button onClick={() => navigate(`/program/day/${day.dayNumber}`)} className={`rounded px-2 py-0.5 text-[12px] font-extrabold uppercase ${isToday ? 'bg-[#C99E25] text-white' : 'bg-surface text-ink-soft hover:text-brand'}`}>Day {day.dayNumber}</button>
+                      <span className="text-xs font-bold text-ink-mute">{fmtDay(day.date)}</span>
+                      {isToday && <span className="animate-pulse text-[10px] font-black uppercase tracking-wider text-[#C99E25]">● Today</span>}
                     </div>
-                    <div className="text-[13px] font-bold text-ink leading-tight">
-                      {day.theme}
-                    </div>
+                    {day.theme && <div className="text-[13px] font-bold leading-tight text-ink">{day.theme}</div>}
                   </div>
-
                   <div className="pt-4">
-                    {events.length > 0 ? (
-                      <div className="no-scrollbar flex gap-4 overflow-x-auto pb-1">
-                        {events.map((e) => (
-                          <MiniEventCard key={e.id} event={e} />
+                    {evs.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {evs.map((e) => (
+                          <button key={e.id} onClick={() => navigate(`/event/${e.slug}`)} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-brand hover:text-brand">
+                            {e.chapter?.flagEmoji && <span>{e.chapter.flagEmoji}</span>}
+                            <span className="max-w-[220px] truncate">{e.title}</span>
+                            {e.city && <span className="text-ink-mute">· {e.city}</span>}
+                          </button>
                         ))}
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between text-xs text-ink-mute">
-                        <span>No events scheduled yet for this day.</span>
-                        <button 
-                          onClick={() => navigate('/list-your-event')}
-                          className="font-bold text-brand hover:underline"
-                        >
-                          ＋ Add an event
-                        </button>
-                      </div>
+                      <div className="text-xs text-ink-mute">No events scheduled yet for this day.</div>
                     )}
                   </div>
                 </div>
               );
             })}
-
-            {visibleLimit < 100 && (
-              <button
-                onClick={() => setVisibleLimit((v) => Math.min(100, v + 20))}
-                className="mt-4 w-full py-3 bg-white border border-line rounded-xl text-sm font-bold text-brand hover:border-brand hover:bg-brand-soft transition"
-              >
-                Load more days
-              </button>
+            {visible < days.length && (
+              <button onClick={() => setVisible((v) => Math.min(100, v + 20))} className="mt-4 w-full rounded-xl border border-line bg-white py-3 text-sm font-bold text-brand transition hover:border-brand hover:bg-brand-soft">Load more days</button>
             )}
           </div>
         </div>
 
-        {/* Desktop Sticky Sidebar Navigation */}
-        <aside className="sticky top-[90px] hidden lg:block bg-white border border-line rounded-xl p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-ink uppercase tracking-wider mb-4 border-b border-line pb-2">Jump to Week</h3>
-          <div className="flex flex-col gap-2.5 max-h-[400px] overflow-y-auto no-scrollbar">
-            <button onClick={() => scrollToDay(1)} className="text-left text-xs font-semibold text-ink-soft hover:text-brand py-1 border-b border-neutral-50">Week 1 (Day 1)</button>
-            <button onClick={() => scrollToDay(15)} className="text-left text-xs font-semibold text-ink-soft hover:text-brand py-1 border-b border-neutral-50">Week 3 (Day 15)</button>
-            <button onClick={() => scrollToDay(30)} className="text-left text-xs font-semibold text-ink-soft hover:text-brand py-1 border-b border-neutral-50">Week 5 (Day 30)</button>
-            <button onClick={() => scrollToDay(42)} className="text-left text-xs font-bold text-[#C99E25] py-1 border-b border-neutral-50 flex items-center justify-between">
-              <span>Today (Day 42)</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-[#C99E25]" />
-            </button>
-            <button onClick={() => scrollToDay(50)} className="text-left text-xs font-semibold text-ink-soft hover:text-brand py-1 border-b border-neutral-50">Week 8 (Day 50)</button>
-            <button onClick={() => scrollToDay(70)} className="text-left text-xs font-semibold text-ink-soft hover:text-brand py-1 border-b border-neutral-50">Week 10 (Day 70)</button>
-            <button onClick={() => scrollToDay(100)} className="text-left text-xs font-semibold text-ink-soft hover:text-brand py-1 border-b border-neutral-50">Week 15 (Day 100)</button>
+        <aside className="sticky top-[90px] hidden rounded-xl border border-line bg-white p-5 shadow-sm lg:block">
+          <h3 className="mb-4 border-b border-line pb-2 text-sm font-bold uppercase tracking-wider text-ink">Jump to week</h3>
+          <div className="no-scrollbar flex max-h-[400px] flex-col gap-2.5 overflow-y-auto">
+            {[1, 15, 30, 50, 70, 100].map((n) => (
+              <button key={n} onClick={() => scrollToDay(n)} className="border-b border-neutral-50 py-1 text-left text-xs font-semibold text-ink-soft hover:text-brand">Day {n}</button>
+            ))}
+            {todayNum && <button onClick={() => scrollToDay(todayNum)} className="flex items-center justify-between py-1 text-left text-xs font-bold text-[#C99E25]"><span>Today (Day {todayNum})</span><span className="h-1.5 w-1.5 rounded-full bg-[#C99E25]" /></button>}
           </div>
         </aside>
       </div>

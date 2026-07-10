@@ -39,6 +39,7 @@ export default function Home() {
   const [speakers, setSpeakers] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [articles, setArticles] = useState([]);
+  const [program, setProgram] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -49,7 +50,14 @@ export default function Home() {
     api.speakers().then((d) => setSpeakers((d || []).slice(0, 10))).catch(() => {});
     api.sponsors().then((d) => setSponsors((d || []).slice(0, 12))).catch(() => {});
     api.articles({ limit: 3 }).then((d) => setArticles(d || [])).catch(() => {});
+    api.currentProgram().then(setProgram).catch(() => {});
   }, []);
+
+  const programStatus = program?.season?.phase === 'ACTIVE'
+    ? `Day ${program.season.dayOfSeason} of ${program.season.totalDays}`
+    : program?.season?.phase === 'UPCOMING'
+      ? `Starts in ${program.season.daysUntil} day${program.season.daysUntil === 1 ? '' : 's'}`
+      : program ? 'Season ended' : '';
 
   const spotlight = [...chapters].filter((c) => c.isFlagship).slice(0, 8);
 
@@ -84,6 +92,20 @@ export default function Home() {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* 100 Days Program banner (§5.5) */}
+      {program && (
+        <section className="mx-auto max-w-container px-4 pt-8 sm:px-6">
+          <button onClick={() => navigate('/program')} className="flex w-full flex-col items-start gap-3 overflow-hidden rounded-2xl bg-gold-gradient p-6 text-left text-white shadow-card transition hover:brightness-105 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="rounded bg-white/20 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider backdrop-blur-md">{programStatus}</span>
+              <div className="mt-2 text-xl font-black sm:text-2xl">{program.name}</div>
+              <div className="mt-1 text-sm text-white/85">100 days of business events across the OBS network — see the day-by-day agenda.</div>
+            </div>
+            <span className="shrink-0 rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold uppercase tracking-wider text-black">View program ›</span>
+          </button>
         </section>
       )}
 

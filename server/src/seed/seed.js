@@ -3,7 +3,8 @@ import { connectDB, disconnectDB } from '../config/db.js';
 import { env } from '../config/env.js';
 import { slugify } from '../utils/slugify.js';
 import { buildChapters } from './chapters.data.js';
-import { Category, Chapter, CmsPage, User, OrganizerProfile, Event } from '../models/index.js';
+import { Category, Chapter, CmsPage, User, OrganizerProfile, Event, Program } from '../models/index.js';
+import { seedCurrentProgram } from '../modules/programs/programs.service.js';
 
 // Idempotent seed (build plan §13 Phase 0.2): admin user, 12 categories,
 // 108 chapters (Appendix A), 3 CMS page stubs. Phase 1 adds a demo organizer +
@@ -149,6 +150,7 @@ async function seed() {
   ];
   const demoProfile = await seedDemoOrganizer();
   const publishedEvents = await seedDemoEvents(demoProfile);
+  const program = await seedCurrentProgram(); // §5.5 current 100 Days edition + 100 days
 
   const admins = await User.countDocuments({ role: 'ADMIN' });
 
@@ -159,6 +161,7 @@ async function seed() {
   console.log(`  admins     : ${admins} (${adminEmail})`);
   console.log(`  demo org   : ${DEMO_ORGANIZER.email} / ${DEMO_ORGANIZER.password} (APPROVED)`);
   console.log(`  pub events : ${publishedEvents}`);
+  console.log(`  program    : ${program.name} (${await Program.countDocuments()} edition(s))`);
 
   if (chapters !== 108 || categories !== 12) {
     console.warn(`\n[seed] WARNING: expected 108 chapters + 12 categories, got ${chapters} + ${categories}`);

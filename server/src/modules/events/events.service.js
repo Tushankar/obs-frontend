@@ -66,7 +66,7 @@ async function assertRefs({ categoryId, chapterId, speakerIds }) {
 
 // Fields safe to edit AFTER an event is published (additive metadata, not the
 // contract with buyers). Editing only these bypasses the DRAFT/REJECTED gate.
-const POST_PUBLISH_FIELDS = ['speakerIds'];
+const POST_PUBLISH_FIELDS = ['speakerIds', 'programId', 'programDayNumber'];
 
 // Load an event and verify the caller's organizer profile owns it. Exported so
 // the ticket-type / promo-code services can enforce the same ownership guard.

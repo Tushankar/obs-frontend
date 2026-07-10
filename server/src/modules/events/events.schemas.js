@@ -27,6 +27,9 @@ const eventShape = {
   bannerUrl: z.string().trim().max(1000),
   // §5.2 — organizers attach speakers to their own events.
   speakerIds: z.array(objectId).max(50),
+  // §5.5 — link an event to a 100 Days edition + day (nullable to unlink).
+  programId: objectId.nullable(),
+  programDayNumber: z.coerce.number().int().min(1).max(100).nullable(),
 };
 
 const eventObject = z.object(eventShape);
