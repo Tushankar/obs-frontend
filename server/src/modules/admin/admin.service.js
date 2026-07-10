@@ -139,6 +139,24 @@ function adminEventRow(e) {
   };
 }
 
+// Full event detail for the admin editor (adds the editable content fields the
+// list row omits, so the edit modal can prefill — incl. live events).
+export async function getEventAdmin(id) {
+  const e = await Event.findById(id).populate('organizerId', 'orgName').populate('categoryId', 'name');
+  if (!e) throw notFoundError('EVENT_NOT_FOUND', 'Event not found');
+  return {
+    ...adminEventRow(e),
+    description: e.description || '',
+    chapterId: e.chapterId ? String(e.chapterId) : null,
+    meetingLink: e.meetingLink || '',
+    venueName: e.venueName || '',
+    address: e.address || '',
+    country: e.country || '',
+    bannerUrl: e.bannerUrl || '',
+    currency: e.currency || 'INR',
+  };
+}
+
 // The canonical "OBS Events" platform organizer that owns admin-created events.
 // Found-or-created (by slug) and attached to a dedicated system user so it never
 // clashes with a real admin's own organizer profile.
