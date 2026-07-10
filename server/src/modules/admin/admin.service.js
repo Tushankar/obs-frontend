@@ -139,10 +139,55 @@ function adminEventRow(e) {
   };
 }
 
-// PATCH /admin/events/:id — feature toggle (§7) + ownership OBS/PARTNER (§5.6).
-export async function updateEventAdmin(adminId, id, { isFeatured, ownership }) {
+// The canonical "OBS Events" platform organizer that owns admin-created events.
+// Found-or-created (by slug) and attached to a dedicated system user so it never
+// clashes with a real admin's own organizer profile.
+async function platformOrganizer(adminId) {
+  let profile = await OrganizerProfile.findOne({ slug: 'obs-events' });
+  if (profile) return profile;
+  let sysUser = await User.findOne({ email: 'platform@obs.events' });
+  if (!sysUser) sysUser = await User.create({ name: 'OBS Events', email: 'platform@obs.events', role: 'USER', status: 'ACTIVE', emailVerifiedAt: new Date() });
+  profile = await OrganizerProfile.findOne({ userId: sysUser._id });
+  if (!profile) {
+    profile = await OrganizerProfile.create({ userId: sysUser._id, orgName: 'OBS Events', slug: 'obs-events', status: 'APPROVED', approvedById: adminId, approvedAt: new Date(), bio: 'Official events hosted by the OBS platform.' });
+  }
+  return profile;
+}
+
+const ADMIN_EVENT_FIELDS = ['title', 'description', 'categoryId', 'chapterId', 'isOnline', 'meetingLink', 'venueName', 'address', 'city', 'country', 'startAt', 'endAt', 'currency', 'bannerUrl'];
+
+async function assertEventRefs(body) {
+  if (body.categoryId && !(await Category.exists({ _id: body.categoryId }))) throw conflict('INVALID_CATEGORY', 'Category not found');
+  if (body.chapterId && !(await Chapter.exists({ _id: body.chapterId }))) throw conflict('INVALID_CHAPTER', 'Chapter not found');
+}
+
+// POST /admin/events — admin creates an OBS-platform event directly (ownership
+// OBS, optionally published + featured). Unlike organizer events, this skips the
+// submit→approve loop: the admin publishes it themselves.
+export async function createEventAdmin(adminId, body) {
+  await assertEventRefs(body);
+  const org = await platformOrganizer(adminId);
+  const slug = await uniqueSlug(Event, body.title);
+  const publish = !!body.publish;
+  const doc = { organizerId: org._id, ownership: 'OBS', slug, isFeatured: !!body.isFeatured, status: publish ? 'PUBLISHED' : 'DRAFT' };
+  for (const f of ADMIN_EVENT_FIELDS) if (body[f] !== undefined) doc[f] = body[f];
+  if (publish) doc.publishedAt = new Date();
+  if (doc.startAt && doc.endAt && new Date(doc.endAt) <= new Date(doc.startAt)) throw conflict('INVALID_DATE_RANGE', 'End time must be after the start time');
+  const event = await Event.create(doc);
+  await event.populate('organizerId', 'orgName');
+  await event.populate('categoryId', 'name');
+  await writeAudit({ actorId: adminId, action: 'EVENT_CREATED_BY_ADMIN', entityType: 'Event', entityId: event._id, meta: { title: event.title, published: publish } });
+  return adminEventRow(event);
+}
+
+// PATCH /admin/events/:id — feature toggle (§7) + ownership OBS/PARTNER (§5.6)
+// + admin publish/unpublish and content edits (for OBS-platform events).
+export async function updateEventAdmin(adminId, id, body) {
+  const { isFeatured, ownership, publish } = body;
   const event = await Event.findById(id).populate('organizerId', 'orgName').populate('categoryId', 'name');
   if (!event) throw notFoundError('EVENT_NOT_FOUND', 'Event not found');
+  await assertEventRefs(body);
+
   if (isFeatured !== undefined) {
     event.isFeatured = !!isFeatured;
     await writeAudit({ actorId: adminId, action: isFeatured ? 'EVENT_FEATURED' : 'EVENT_UNFEATURED', entityType: 'Event', entityId: event._id, meta: { title: event.title } });
@@ -151,6 +196,19 @@ export async function updateEventAdmin(adminId, id, { isFeatured, ownership }) {
     event.ownership = ownership;
     await writeAudit({ actorId: adminId, action: 'EVENT_OWNERSHIP_SET', entityType: 'Event', entityId: event._id, meta: { title: event.title, ownership } });
   }
+  for (const f of ADMIN_EVENT_FIELDS) if (body[f] !== undefined) event[f] = body[f];
+  if (body.title !== undefined && body.title !== event.title) event.slug = await uniqueSlug(Event, body.title, { ignoreId: event._id });
+  if (event.startAt && event.endAt && new Date(event.endAt) <= new Date(event.startAt)) throw conflict('INVALID_DATE_RANGE', 'End time must be after the start time');
+
+  if (publish === true && event.status !== 'PUBLISHED') {
+    event.status = 'PUBLISHED';
+    if (!event.publishedAt) event.publishedAt = new Date();
+    await writeAudit({ actorId: adminId, action: 'EVENT_PUBLISHED_BY_ADMIN', entityType: 'Event', entityId: event._id, meta: { title: event.title } });
+  } else if (publish === false && event.status === 'PUBLISHED') {
+    event.status = 'DRAFT';
+    await writeAudit({ actorId: adminId, action: 'EVENT_UNPUBLISHED_BY_ADMIN', entityType: 'Event', entityId: event._id, meta: { title: event.title } });
+  }
+
   await event.save();
   return adminEventRow(event);
 }

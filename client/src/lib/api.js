@@ -152,6 +152,9 @@ api.approveEvent = (id) => unwrap(api.post(`/admin/events/${id}/approve`)).then(
 api.rejectEvent = (id, reason) => unwrap(api.post(`/admin/events/${id}/reject`, { reason })).then((d) => d.event);
 api.featureEvent = (id, isFeatured) => unwrap(api.patch(`/admin/events/${id}`, { isFeatured })).then((d) => d.event);
 api.setEventOwnership = (id, ownership) => unwrap(api.patch(`/admin/events/${id}`, { ownership })).then((d) => d.event);
+// Admin-created OBS platform events (create/publish directly, no organizer submit).
+api.adminCreateEvent = (body) => unwrap(api.post('/admin/events', body)).then((d) => d.event);
+api.adminUpdateEvent = (id, body) => unwrap(api.patch(`/admin/events/${id}`, body)).then((d) => d.event);
 api.launches = (scope) => unwrap(api.get('/launches', { params: scope ? { scope } : {} })).then((d) => d.events);
 
 // Admin — dashboard, users, transactions (Phase 3.5)

@@ -25,11 +25,39 @@ export const rejectEventSchema = z.object({
   reason: z.string().trim().min(3, 'A reason is required').max(1000),
 });
 
-// --- Event feature toggle (task 3.5) + ownership (task 5.6) ---
-export const featureEventSchema = z.object({
+// --- Admin-created OBS events + feature toggle (3.5) + ownership (5.6) ---
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
+const eventContentShape = {
+  title: z.string().trim().min(3, 'Title must be at least 3 characters').max(160),
+  description: z.string().trim().max(20000),
+  categoryId: objectId,
+  chapterId: objectId.nullable(),
+  isOnline: z.boolean(),
+  meetingLink: z.string().trim().max(500),
+  venueName: z.string().trim().max(200),
+  address: z.string().trim().max(500),
+  city: z.string().trim().max(120),
+  country: z.string().trim().max(120),
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date(),
+  currency: z.string().trim().length(3).toUpperCase(),
+  bannerUrl: z.string().trim().max(1000),
+};
+
+// POST /admin/events — admin creates an OBS event (title required; publish to go
+// live immediately, isFeatured to surface it on the home Featured rail).
+export const createEventSchema = z.object(eventContentShape).partial().extend({
+  title: eventContentShape.title,
+  publish: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+});
+
+// PATCH /admin/events/:id — feature/ownership/publish + content edits.
+export const featureEventSchema = z.object(eventContentShape).partial().extend({
   isFeatured: z.boolean().optional(),
   ownership: z.enum(EVENT_OWNERSHIP).optional(),
-}).refine((v) => v.isFeatured !== undefined || v.ownership !== undefined, { message: 'Nothing to update' });
+  publish: z.boolean().optional(),
+}).refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' });
 
 // --- Users (task 3.5) ---
 export const listUsersQuery = z.object({

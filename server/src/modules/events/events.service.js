@@ -310,6 +310,7 @@ export async function listPublicEvents(q) {
   if (q.mode === 'venue') filter.isOnline = false;
   if (q.owner === 'obs') filter.ownership = 'OBS'; // §5.6 All/OBS/Partner tabs
   if (q.owner === 'partner') filter.ownership = 'PARTNER';
+  if (q.featured === 'true' || q.featured === true) filter.isFeatured = true; // home Featured rail
 
   if (q.category) {
     const cat = await Category.findOne({ slug: q.category }).select('_id');

@@ -31,6 +31,11 @@ export async function rejectEvent(req, res) {
   res.status(200).json({ event });
 }
 
+export async function createEvent(req, res) {
+  const event = await adminService.createEventAdmin(req.user.id, req.body);
+  res.status(201).json({ event });
+}
+
 export async function featureEvent(req, res) {
   const event = await adminService.updateEventAdmin(req.user.id, req.params.id, req.body);
   res.status(200).json({ event });
