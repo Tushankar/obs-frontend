@@ -7,7 +7,7 @@ const paymentSchema = new Schema(
   {
     orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
     gateway: { type: String, enum: GATEWAY, required: true },
-    gatewayOrderId: String, // razorpay order id / stripe payment intent id
+    gatewayOrderId: String, // stripe payment intent id
     gatewayPaymentId: { type: String, index: true, sparse: true },
     gatewaySignature: String,
     amount: { type: Number, required: true }, // paise

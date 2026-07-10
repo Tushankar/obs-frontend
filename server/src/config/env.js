@@ -50,9 +50,7 @@ export const env = {
   SERVICE_FEE_PERCENT: Number(process.env.SERVICE_FEE_PERCENT) || 0,
   ORDER_HOLD_MINUTES: Number(process.env.ORDER_HOLD_MINUTES) || 15,
   REFUND_CUTOFF_HOURS: Number(process.env.REFUND_CUTOFF_HOURS) || 24,
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || '',
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
-  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+  // Payments are Stripe-only (all currencies incl. INR). Razorpay was removed.
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
   STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || '',
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',

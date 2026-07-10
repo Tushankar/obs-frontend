@@ -18,6 +18,8 @@ export const CHAPTER_TYPE = [
 export const EVENT_STATUS = ['DRAFT', 'PENDING_APPROVAL', 'PUBLISHED', 'REJECTED', 'CANCELLED', 'COMPLETED'];
 export const DISCOUNT_TYPE = ['PERCENT', 'FLAT'];
 export const ORDER_STATUS = ['PENDING', 'PAID', 'FAILED', 'EXPIRED', 'CANCELLED', 'REFUND_REQUESTED', 'REFUNDED'];
+// Payments are Stripe-only. RAZORPAY is retained as a legacy enum value so any
+// pre-existing orders/payments still validate; new orders only use STRIPE/FREE.
 export const GATEWAY = ['RAZORPAY', 'STRIPE', 'FREE'];
 export const PAYMENT_STATUS = ['CREATED', 'CAPTURED', 'FAILED', 'REFUNDED'];
 export const TICKET_STATUS = ['VALID', 'USED', 'CANCELLED', 'REFUNDED'];

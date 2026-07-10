@@ -94,7 +94,8 @@ export async function createOrder(userId, { eventId, items, promoCode }) {
   const serviceFee = Math.round(((subtotal - discountAmount) * env.SERVICE_FEE_PERCENT) / 100);
   const totalAmount = subtotal - discountAmount + serviceFee;
   const currency = event.currency || 'INR';
-  const gateway = totalAmount === 0 ? 'FREE' : currency === 'INR' ? 'RAZORPAY' : 'STRIPE';
+  // Payments are Stripe-only (all currencies, incl. INR); free orders skip the gateway.
+  const gateway = totalAmount === 0 ? 'FREE' : 'STRIPE';
 
   // Order number generated before the txn so a retry/abort doesn't burn extra seqs.
   const orderNumber = formatOrderNumber(await nextSeq('order'), new Date().getFullYear());

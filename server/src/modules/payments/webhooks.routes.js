@@ -6,7 +6,6 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 // raw request body is available for signature verification.
 const router = Router();
 
-router.post('/razorpay', asyncHandler(c.razorpay_));
 router.post('/stripe', asyncHandler(c.stripe_));
 
 export default router;

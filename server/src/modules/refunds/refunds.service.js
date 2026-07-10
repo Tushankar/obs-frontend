@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { Order, Payment, Refund, Ticket, TicketType, Event, User } from '../../models/index.js';
 import { env } from '../../config/env.js';
-import { getRazorpay, isRazorpayConfigured } from '../../config/razorpay.js';
 import { getStripe, isStripeConfigured } from '../../config/stripe.js';
 import { AppError, conflict, forbidden, notFoundError } from '../../utils/errors.js';
 import { writeAudit } from '../../utils/audit.js';
@@ -70,16 +69,12 @@ export async function approveRefund(adminId, refundId) {
   const payment = refund.paymentId;
 
   let gatewayRefundId;
-  if (payment.gateway === 'RAZORPAY') {
-    if (!isRazorpayConfigured()) throw new AppError(503, 'RAZORPAY_NOT_CONFIGURED', 'Razorpay is not configured');
-    const rf = await getRazorpay().payments.refund(payment.gatewayPaymentId, { amount: refund.amount, notes: { refundId: String(refund._id) } });
-    gatewayRefundId = rf.id;
-  } else if (payment.gateway === 'STRIPE') {
+  if (payment.gateway === 'STRIPE') {
     if (!isStripeConfigured()) throw new AppError(503, 'STRIPE_NOT_CONFIGURED', 'Stripe is not configured');
     const rf = await getStripe().refunds.create({ payment_intent: payment.gatewayOrderId, amount: refund.amount, metadata: { refundId: String(refund._id) } });
     gatewayRefundId = rf.id;
   } else {
-    throw conflict('REFUND_GATEWAY', 'This order has no refundable gateway payment');
+    throw conflict('REFUND_GATEWAY', 'This order has no refundable Stripe payment');
   }
 
   refund.status = 'APPROVED';
@@ -138,12 +133,6 @@ async function finalizeRefund(refund) {
     }
   }
   return { refunded: done, alreadyRefunded: !done };
-}
-
-export async function completeRefundByGatewayRefundId(gatewayRefundId) {
-  const refund = await Refund.findOne({ gatewayRefundId });
-  if (!refund) return { ignored: 'unknown_refund' };
-  return finalizeRefund(refund);
 }
 
 export async function completeRefundByOrderId(orderId) {

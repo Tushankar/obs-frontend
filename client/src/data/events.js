@@ -220,7 +220,7 @@ export const FAQ_GROUPS = [
   {
     cat: 'Booking',
     items: [
-      ['How do I book a ticket?', 'Open any event, choose your ticket type and quantity, then tap Book now. You can pay by UPI, card or netbanking via Razorpay or Stripe. Your e-ticket arrives by email within a minute.'],
+      ['How do I book a ticket?', 'Open any event, choose your ticket type and quantity, then tap Book now. You can pay by card, securely via Stripe. Your e-ticket arrives by email within a minute.'],
       ['Can I book for someone else?', 'Yes. Enter the attendee’s name and email at checkout and the ticket is issued in their name. They’ll receive the QR code directly.'],
       ['Is there a booking fee?', 'A 5% service fee applies to paid tickets and is shown clearly before you pay. Free events have no fee.'],
       ['How long are seats held?', 'Once you reach checkout, your seats are held for 15 minutes. If the timer runs out the seats are released back to the pool.'],
@@ -346,7 +346,7 @@ export const LYE_STATS = [
 export const LYE_BENEFITS = [
   ['🎟️', 'Ticketing that just works', 'Tiered pricing, promo codes and reserved capacity — configured in minutes, no spreadsheets.'],
   ['📲', 'Scan at the door', 'Free QR check-in from any phone. No hardware to rent, no queues at the gate.'],
-  ['💳', 'Get paid fast', 'Secure payouts via Razorpay & Stripe with a transparent 5% fee and clear statements.'],
+  ['💳', 'Get paid fast', 'Secure payments via Stripe with a transparent 5% fee and clear statements.'],
   ['📣', 'A built-in audience', 'Your event surfaces to the right chapters and categories — automatically.'],
   ['📊', 'Live dashboards', 'Track sales, attendees and revenue in real time, from the first ticket onward.'],
   ['🤝', 'Real support', 'A dedicated partnerships manager for flagship and recurring events.'],

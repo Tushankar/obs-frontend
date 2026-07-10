@@ -6,21 +6,18 @@ import StripePaymentForm from '../components/checkout/StripePaymentForm';
 import { Icon } from '../components/common/Icon';
 import { useApp } from '../context/AppContext';
 import api, { apiError, apiErrorCode } from '../lib/api';
-import { loadScript } from '../lib/loadScript';
 
 const money = (paise, currency = 'INR') => {
   const sym = currency === 'INR' ? '₹' : `${currency} `;
   return sym + (Number(paise) / 100).toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US');
 };
-const RZP_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
 
 export default function Checkout() {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const { user, pushToast } = useApp();
+  const { pushToast } = useApp();
   const [order, setOrder] = useState(undefined); // undefined=loading, null=not found
   const [left, setLeft] = useState(null);
-  const [gateway, setGateway] = useState(null);
   const [paying, setPaying] = useState(false);
   const [stripe, setStripe] = useState(null); // { clientSecret, publishableKey }
 
@@ -31,7 +28,6 @@ export default function Checkout() {
       .then((o) => {
         setOrder(o);
         if (o.status === 'PAID') navigate(`/checkout/${orderId}/success`, { replace: true });
-        setGateway(o.currency === 'INR' ? 'razorpay' : 'stripe');
       })
       .catch(() => setOrder(null));
   }, [orderId, navigate]);
@@ -62,34 +58,7 @@ export default function Checkout() {
   const ss = left != null ? String(left % 60).padStart(2, '0') : '00';
   const urgent = left != null && left < 180;
 
-  async function payRazorpay() {
-    setPaying(true);
-    try {
-      const r = await api.razorpayCreateOrder(orderId);
-      await loadScript(RZP_SCRIPT);
-      const rzp = new window.Razorpay({
-        key: r.keyId,
-        order_id: r.razorpayOrderId,
-        amount: r.amount,
-        currency: r.currency,
-        name: 'OBS Events',
-        description: ev.title,
-        prefill: { name: user?.name, email: user?.email },
-        handler: async (resp) => {
-          try {
-            await api.razorpayVerify({ orderId, razorpay_order_id: resp.razorpay_order_id, razorpay_payment_id: resp.razorpay_payment_id, razorpay_signature: resp.razorpay_signature });
-          } catch { /* verify is a fast-path; webhook confirms regardless */ }
-          navigate(`/checkout/${orderId}/success`);
-        },
-        modal: { ondismiss: () => setPaying(false) },
-      });
-      rzp.open();
-    } catch (e) {
-      setPaying(false);
-      pushToast(apiErrorCode(e) === 'RAZORPAY_NOT_CONFIGURED' ? 'Razorpay isn’t configured in this environment (test keys needed).' : apiError(e, 'Could not start payment'), false);
-    }
-  }
-
+  // Payments are Stripe-only (all currencies, incl. INR).
   async function payStripe() {
     setPaying(true);
     try {
@@ -101,13 +70,6 @@ export default function Checkout() {
       setPaying(false);
     }
   }
-
-  const gwCard = (id, title, sub) => (
-    <button onClick={() => { setGateway(id); setStripe(null); }} className={`flex w-full items-center gap-3 rounded-[10px] border p-4 text-left transition ${gateway === id ? 'border-brand bg-brand-soft' : 'border-line'}`}>
-      <span className={`h-4 w-4 shrink-0 rounded-full ${gateway === id ? 'border-[5px] border-brand' : 'border-2 border-ink-faint'}`} />
-      <span><span className="block text-sm font-semibold text-ink">{title}</span><span className="mt-0.5 block text-xs text-ink-mute">{sub}</span></span>
-    </button>
-  );
 
   return (
     <div className="mx-auto max-w-container px-4 pb-10 pt-6 sm:px-6">
@@ -130,18 +92,18 @@ export default function Checkout() {
       <div className="mt-5 grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_380px]">
         <div className="flex flex-col gap-5">
           <section className="rounded-xl border border-line p-5">
-            <h2 className="mb-4 text-base font-bold text-ink">Payment method</h2>
+            <h2 className="mb-4 text-base font-bold text-ink">Payment</h2>
             {order.status === 'PENDING' && !expired ? (
               <>
-                <div className="flex flex-col gap-2.5">
-                  {order.currency === 'INR' && gwCard('razorpay', 'Razorpay', 'UPI · Cards · Netbanking')}
-                  {gwCard('stripe', 'Stripe', 'International & domestic cards')}
+                <div className="flex items-center gap-3 rounded-[10px] border border-brand bg-brand-soft p-4">
+                  <span className="h-4 w-4 shrink-0 rounded-full border-[5px] border-brand" />
+                  <span><span className="block text-sm font-semibold text-ink">Card payment</span><span className="mt-0.5 block text-xs text-ink-mute">Secured by Stripe · international & domestic cards</span></span>
                 </div>
                 <div className="mt-4">
-                  {gateway === 'stripe' && stripe ? (
+                  {stripe ? (
                     <StripePaymentForm clientSecret={stripe.clientSecret} publishableKey={stripe.publishableKey} orderId={orderId} />
                   ) : (
-                    <button onClick={gateway === 'razorpay' ? payRazorpay : payStripe} disabled={paying} className="flex h-[46px] w-full items-center justify-center gap-2.5 rounded-md bg-brand text-[15px] font-semibold text-white transition hover:bg-brand-dark disabled:opacity-70">
+                    <button onClick={payStripe} disabled={paying} className="flex h-[46px] w-full items-center justify-center gap-2.5 rounded-md bg-brand text-[15px] font-semibold text-white transition hover:bg-brand-dark disabled:opacity-70">
                       {paying ? 'Starting…' : `Pay ${money(order.totalAmount, order.currency)}`}
                     </button>
                   )}

@@ -13,7 +13,7 @@ const COLUMNS = [
   { key: 'date', label: 'Date' },
 ];
 
-const GATEWAYS = ['', 'RAZORPAY', 'STRIPE', 'FREE'];
+const GATEWAYS = ['', 'STRIPE', 'FREE'];
 const STATUSES = ['', 'CREATED', 'CAPTURED', 'FAILED', 'REFUNDED'];
 const selectCls = 'h-9 rounded-md border border-line bg-white px-3 text-[13px] text-ink outline-none transition focus:border-brand';
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');

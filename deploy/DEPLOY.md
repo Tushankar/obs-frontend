@@ -4,7 +4,7 @@ Production topology (plan §13):
 - **MongoDB Atlas** — M0 for staging, M10 for prod.
 - **API** — Node on an EC2 instance, managed by **pm2**, fronted by **nginx** + **certbot** TLS.
 - **Web (React SPA)** — Vite build served either from the same nginx (`deploy/nginx.conf`) or from **S3 + CloudFront**.
-- **Payments** — Razorpay + Stripe in **test mode first**, then flip to live keys (checklist below).
+- **Payments** — Stripe (all currencies incl. INR) in **test mode first**, then flip to live keys (checklist below).
 
 Actual provisioning is the human sign-off for the Phase 4 EXIT — this repo ships the config + checklists; nothing here reaches AWS on its own.
 
@@ -69,18 +69,14 @@ npm run build --workspace client         # → client/dist
 5. Point DNS (Route 53) at CloudFront; request the ACM cert in **us-east-1** for CloudFront.
 
 ## 5. Register live webhook URLs
-Both gateways are the single source of truth (§8.2), so the dashboards must POST to:
-- **Razorpay** → Settings → Webhooks → `https://obsevents.com/api/v1/webhooks/razorpay`
-  - Events: `payment.captured`, `payment.failed`, `refund.processed`.
-  - Copy the signing secret → `RAZORPAY_WEBHOOK_SECRET`.
+Stripe is the single source of truth (§8.2), so the dashboard must POST to:
 - **Stripe** → Developers → Webhooks → `https://obsevents.com/api/v1/webhooks/stripe`
   - Events: `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`.
   - Copy the signing secret → `STRIPE_WEBHOOK_SECRET`.
 `pm2 restart obs-events-api` after editing `server/.env`.
 
 ## 6. Switch-to-live-keys checklist (do last, deliberately)
-- [ ] Razorpay: swap `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` test → **live**; re-create the webhook on the live account; update `RAZORPAY_WEBHOOK_SECRET`.
-- [ ] Stripe: swap `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` test → **live**; re-create the live webhook; update `STRIPE_WEBHOOK_SECRET`.
+- [ ] Stripe: swap `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` test → **live**; re-create the live webhook; update `STRIPE_WEBHOOK_SECRET`. (Stripe handles all currencies incl. INR — confirm INR is enabled on the account.)
 - [ ] `SERVICE_FEE_PERCENT`, `ORDER_HOLD_MINUTES`, `REFUND_CUTOFF_HOURS` confirmed for prod.
 - [ ] S3 bucket is **private** (no public ACLs); IAM role or scoped keys set; `S3_BUCKET`/`AWS_REGION` correct.
 - [ ] SMTP live credentials set; send a real test email (register → check inbox).

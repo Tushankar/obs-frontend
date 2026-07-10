@@ -8,7 +8,7 @@ import { LYE_STATS, LYE_BENEFITS, LYE_QUOTE } from '../data/events';
 const STEPS = [
   ['Tell us about your event', 'Share the format, city and expected audience.'],
   ['Set up ticketing', 'We help you build ticket tiers, pricing and promo codes.'],
-  ['Go live & get paid', 'Publish, sell, scan at the door, and get paid via Razorpay or Stripe.'],
+  ['Go live & get paid', 'Publish, sell, scan at the door, and get paid securely via Stripe.'],
 ];
 const TYPES = ['Summits', 'Webinars', 'Networking', 'Workshops', 'Gala Dinners', 'Other'];
 
