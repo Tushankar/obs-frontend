@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { submitPartnerApplication } from '../../mock/api';
+import api, { apiError } from '../../lib/api';
 import { useApp } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -43,15 +43,21 @@ export default function BecomeSponsor() {
     if (Object.keys(err).length > 0) return;
 
     setSubmitting(true);
-    submitPartnerApplication(form)
-      .then((res) => {
-        if (res.ok) {
-          setSuccess(true);
-          pushToast('Application submitted successfully', true);
-        }
+    api.submitPartnerApplication({
+      orgName: form.orgName.trim(),
+      contactName: form.contactName.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim() || undefined,
+      website: form.website.trim() || undefined,
+      interestTier: form.tier,
+      message: form.message.trim() || undefined,
+    })
+      .then(() => {
+        setSuccess(true);
+        pushToast('Application submitted successfully', true);
       })
-      .catch(() => {
-        pushToast('Something went wrong. Try again.', false);
+      .catch((e2) => {
+        pushToast(apiError(e2, 'Something went wrong. Try again.'), false);
       })
       .finally(() => {
         setSubmitting(false);

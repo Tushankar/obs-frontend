@@ -151,6 +151,19 @@ export default function EventDetail() {
             </>
           )}
 
+          {event.sponsors?.length > 0 && (
+            <>
+              <h2 className="mb-4 mt-8 text-lg font-bold text-ink">Sponsors</h2>
+              <div className="flex flex-wrap gap-3">
+                {event.sponsors.map((sp) => (
+                  <div key={sp.id} title={`${sp.name}${sp.tier ? ` · ${sp.tier}` : ''}`} className="flex h-[64px] w-[150px] items-center justify-center rounded-xl border border-line bg-white p-2">
+                    {sp.logoUrl ? <img src={sp.logoUrl} alt={sp.name} className="max-h-full max-w-full object-contain" /> : <span className="px-1 text-center text-[11px] font-bold uppercase text-ink-mute">{sp.name}</span>}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {event.organizer && (
             <>
               <h2 className="mb-3 mt-8 text-lg font-bold text-ink">Organizer</h2>

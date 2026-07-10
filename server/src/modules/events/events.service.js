@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Event, Category, Chapter, TicketType, Ticket, Speaker } from '../../models/index.js';
+import { sponsorsForEvent } from '../sponsors/sponsors.service.js';
 import { registrationsWorkbook } from '../../utils/xlsx.js';
 import { uniqueSlug } from '../../utils/slugify.js';
 import { presignPut, objectUrl } from '../../utils/s3.js';
@@ -386,7 +387,8 @@ export async function getPublicEventBySlug(slug) {
   const speakers = (event.speakerIds || []).filter((s) => s && s._id).map((s) => ({
     id: String(s._id), name: s.name, slug: s.slug, photoUrl: s.photoUrl || null, title: s.title || null, company: s.company || null,
   }));
-  return { ...publicEventFull(event), speakers, ticketTypes: ticketTypes.map(publicTicketType) };
+  const sponsors = await sponsorsForEvent(event._id); // §5.3 Sponsors block
+  return { ...publicEventFull(event), speakers, sponsors, ticketTypes: ticketTypes.map(publicTicketType) };
 }
 
 // Next 4 upcoming published events sharing the category or chapter.

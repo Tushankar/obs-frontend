@@ -183,6 +183,17 @@ api.createSpeaker = (body) => unwrap(api.post('/admin/speakers', body)).then((d)
 api.updateSpeaker = (id, body) => unwrap(api.patch(`/admin/speakers/${id}`, body)).then((d) => d.speaker);
 api.deleteSpeaker = (id) => unwrap(api.delete(`/admin/speakers/${id}`));
 
+// Sponsors & partners (Phase 5.3)
+api.sponsors = (params) => unwrap(api.get('/sponsors', { params })).then((d) => d.sponsors);
+api.eventSponsors = (slug) => unwrap(api.get(`/events/${slug}/sponsors`)).then((d) => d.sponsors);
+api.submitPartnerApplication = (body) => unwrap(api.post('/partner-applications', body)).then((d) => d.application);
+api.adminSponsors = () => unwrap(api.get('/admin/sponsors')).then((d) => d.sponsors);
+api.createSponsor = (body) => unwrap(api.post('/admin/sponsors', body)).then((d) => d.sponsor);
+api.updateSponsor = (id, body) => unwrap(api.patch(`/admin/sponsors/${id}`, body)).then((d) => d.sponsor);
+api.deleteSponsor = (id) => unwrap(api.delete(`/admin/sponsors/${id}`));
+api.adminPartnerApplications = (params) => unwrap(api.get('/admin/partner-applications', { params })).then((d) => d.applications);
+api.updatePartnerApplication = (id, body) => unwrap(api.patch(`/admin/partner-applications/${id}`, body)).then((d) => d.application);
+
 // Admin — reports (Phase 4.1)
 api.reportsSummary = () => unwrap(api.get('/admin/reports/summary')).then((d) => d.summary);
 api.reportsMonthly = (year) => unwrap(api.get('/admin/reports/monthly', { params: year ? { year } : {} })).then((d) => d.monthly);

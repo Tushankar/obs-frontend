@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSponsors } from '../../mock/api';
+import api from '../../lib/api';
 import SponsorLogo from '../../components/cards/SponsorLogo';
 
 export default function SponsorsShowcase() {
@@ -10,16 +10,16 @@ export default function SponsorsShowcase() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    getSponsors().then((data) => {
-      // Group by tier
-      const grp = data.reduce((acc, curr) => {
-        if (!acc[curr.tier]) acc[curr.tier] = [];
-        acc[curr.tier].push(curr);
-        return acc;
-      }, {});
-      setGroups(grp);
-      setLoading(false);
-    });
+    api.sponsors()
+      .then((data) => {
+        const grp = (data || []).reduce((acc, curr) => {
+          (acc[curr.tier] = acc[curr.tier] || []).push(curr);
+          return acc;
+        }, {});
+        setGroups(grp);
+      })
+      .catch(() => setGroups({}))
+      .finally(() => setLoading(false));
   }, []);
 
   const tiers = [
@@ -104,7 +104,7 @@ export default function SponsorsShowcase() {
 
                   <div className={`flex flex-wrap gap-4 items-center ${isLarge ? 'justify-center' : 'justify-start'}`}>
                     {list.map((sp) => (
-                      <SponsorLogo key={sp._id} sponsor={sp} large={isLarge} />
+                      <SponsorLogo key={sp.id} sponsor={sp} large={isLarge} />
                     ))}
                   </div>
                 </section>

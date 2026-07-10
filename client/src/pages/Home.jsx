@@ -36,6 +36,7 @@ export default function Home() {
   const [cats, setCats] = useState([]);
   const [chapters, setChapters] = useState([]);
   const [speakers, setSpeakers] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -44,6 +45,7 @@ export default function Home() {
     api.categories().then(setCats).catch(() => {});
     api.chapters().then(setChapters).catch(() => {});
     api.speakers().then((d) => setSpeakers((d || []).slice(0, 10))).catch(() => {});
+    api.sponsors().then((d) => setSponsors((d || []).slice(0, 12))).catch(() => {});
   }, []);
 
   const spotlight = [...chapters].filter((c) => c.isFlagship).slice(0, 8);
@@ -101,6 +103,23 @@ export default function Home() {
                 <span className="mt-2 block truncate text-sm font-semibold text-ink">{s.name}</span>
                 <span className="block truncate text-[11px] text-ink-mute">{s.company || s.title || ''}</span>
               </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Sponsors strip (§5.3) */}
+      {sponsors.length > 0 && (
+        <section className="mx-auto max-w-container px-4 pt-10 sm:px-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-ink">Our partners</h2>
+            <button onClick={() => navigate('/sponsors')} className="text-[13px] font-semibold text-brand hover:underline">See all ›</button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {sponsors.map((sp) => (
+              <div key={sp.id} title={sp.name} className="flex h-[60px] w-[140px] items-center justify-center rounded-xl border border-line bg-white p-2">
+                {sp.logoUrl ? <img src={sp.logoUrl} alt={sp.name} className="max-h-full max-w-full object-contain opacity-80" /> : <span className="px-1 text-center text-[11px] font-bold uppercase text-ink-mute">{sp.name}</span>}
+              </div>
             ))}
           </div>
         </section>

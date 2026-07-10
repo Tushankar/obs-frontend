@@ -19,3 +19,5 @@ export { default as Counter } from './Counter.js';
 export { default as Session } from './Session.js';
 // §5.1 community & content collections (Phase 5)
 export { default as Speaker } from './Speaker.js';
+export { default as Sponsor } from './Sponsor.js';
+export { default as PartnerApplication } from './PartnerApplication.js';
