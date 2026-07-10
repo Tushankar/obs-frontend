@@ -66,7 +66,7 @@ async function assertRefs({ categoryId, chapterId, speakerIds }) {
 
 // Fields safe to edit AFTER an event is published (additive metadata, not the
 // contract with buyers). Editing only these bypasses the DRAFT/REJECTED gate.
-const POST_PUBLISH_FIELDS = ['speakerIds', 'programId', 'programDayNumber'];
+const POST_PUBLISH_FIELDS = ['speakerIds', 'programId', 'programDayNumber', 'isLaunch', 'launchAt'];
 
 // Load an event and verify the caller's organizer profile owns it. Exported so
 // the ticket-type / promo-code services can enforce the same ownership guard.
@@ -270,6 +270,9 @@ export function publicEventCard(e) {
     city: e.city || null,
     country: e.country || null,
     isFeatured: !!e.isFeatured,
+    ownership: e.ownership || 'OBS',
+    isLaunch: !!e.isLaunch,
+    launchAt: e.launchAt || null,
     category: cat ? { name: cat.name, slug: cat.slug } : null,
     chapter: chap ? { name: chap.name, slug: chap.slug, flagEmoji: chap.flagEmoji || null } : null,
   };
@@ -293,6 +296,8 @@ export async function listPublicEvents(q) {
   if (q.city) filter.city = { $regex: `^${escapeRegex(q.city)}$`, $options: 'i' };
   if (q.mode === 'online') filter.isOnline = true;
   if (q.mode === 'venue') filter.isOnline = false;
+  if (q.owner === 'obs') filter.ownership = 'OBS'; // §5.6 All/OBS/Partner tabs
+  if (q.owner === 'partner') filter.ownership = 'PARTNER';
 
   if (q.category) {
     const cat = await Category.findOne({ slug: q.category }).select('_id');
@@ -404,5 +409,26 @@ export async function similarEvents(slug) {
     .populate('chapterId', 'name slug flagEmoji')
     .sort({ startAt: 1 })
     .limit(4);
+  return rows.map(publicEventCard);
+}
+
+// GET /launches ?scope=upcoming|recent — events flagged isLaunch (§5.6).
+export async function listLaunches({ scope = 'upcoming' } = {}) {
+  const now = new Date();
+  const filter = { status: 'PUBLISHED', isLaunch: true };
+  let sortSpec;
+  if (scope === 'recent') {
+    filter.launchAt = { $lte: now };
+    sortSpec = { launchAt: -1 };
+  } else {
+    // upcoming: a future launchAt, or none set yet (TBA) — soonest first.
+    filter.$or = [{ launchAt: { $gte: now } }, { launchAt: null }];
+    sortSpec = { launchAt: 1, startAt: 1 };
+  }
+  const rows = await Event.find(filter)
+    .populate('categoryId', 'name slug')
+    .populate('chapterId', 'name slug flagEmoji')
+    .sort(sortSpec)
+    .limit(48);
   return rows.map(publicEventCard);
 }

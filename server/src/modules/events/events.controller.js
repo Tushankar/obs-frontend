@@ -64,3 +64,9 @@ export async function similar(req, res) {
   const events = await eventService.similarEvents(req.params.slug);
   res.status(200).json({ events });
 }
+
+// GET /launches (§5.6)
+export async function launches(req, res) {
+  const events = await eventService.listLaunches(req.query);
+  res.status(200).json({ events });
+}

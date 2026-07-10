@@ -65,6 +65,19 @@ export default function Events() {
     }
   }
 
+  async function setOwnership(ev, ownership) {
+    setBusyId(ev.id);
+    try {
+      await api.setEventOwnership(ev.id, ownership);
+      pushToast(`Marked “${ev.title}” as ${ownership}`);
+      load();
+    } catch (e) {
+      pushToast(apiError(e, 'Action failed'), false);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const columns = [
     { key: 'title', label: 'Event' },
     { key: 'organizer', label: 'Organizer' },
@@ -102,7 +115,17 @@ export default function Events() {
         }
         if (ev.status === 'PUBLISHED') {
           return (
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-2">
+              <select
+                value={ev.ownership || 'OBS'}
+                disabled={busyId === ev.id}
+                onChange={(e) => setOwnership(ev, e.target.value)}
+                className="h-8 rounded-md border border-line bg-white px-2 text-[12px] text-ink outline-none focus:border-brand"
+                aria-label="Ownership"
+              >
+                <option value="OBS">OBS</option>
+                <option value="PARTNER">Partner</option>
+              </select>
               <Btn size="sm" variant={ev.isFeatured ? 'outline' : 'ghost'} disabled={busyId === ev.id} onClick={() => toggleFeature(ev)}>
                 {ev.isFeatured ? 'Unfeature' : 'Feature'}
               </Btn>

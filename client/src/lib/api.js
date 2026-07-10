@@ -151,6 +151,8 @@ api.adminEvents = (params) => unwrap(api.get('/admin/events', { params }));
 api.approveEvent = (id) => unwrap(api.post(`/admin/events/${id}/approve`)).then((d) => d.event);
 api.rejectEvent = (id, reason) => unwrap(api.post(`/admin/events/${id}/reject`, { reason })).then((d) => d.event);
 api.featureEvent = (id, isFeatured) => unwrap(api.patch(`/admin/events/${id}`, { isFeatured })).then((d) => d.event);
+api.setEventOwnership = (id, ownership) => unwrap(api.patch(`/admin/events/${id}`, { ownership })).then((d) => d.event);
+api.launches = (scope) => unwrap(api.get('/launches', { params: scope ? { scope } : {} })).then((d) => d.events);
 
 // Admin — dashboard, users, transactions (Phase 3.5)
 api.adminDashboard = () => unwrap(api.get('/admin/dashboard'));

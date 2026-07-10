@@ -40,10 +40,12 @@ export default function Home() {
   const [sponsors, setSponsors] = useState([]);
   const [articles, setArticles] = useState([]);
   const [program, setProgram] = useState(null);
+  const [launches, setLaunches] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     api.listEvents({ sort: 'soonest', limit: 8 }).then((d) => setSoon(d.events)).catch(() => setSoon([]));
+    api.launches('upcoming').then((d) => setLaunches((d || []).slice(0, 8))).catch(() => setLaunches([]));
     api.listEvents({ sort: 'newest', limit: 8 }).then((d) => setRecent(d.events)).catch(() => setRecent([]));
     api.categories().then(setCats).catch(() => {});
     api.chapters().then(setChapters).catch(() => {});
@@ -111,6 +113,7 @@ export default function Home() {
 
       <Rail title="Happening soon" events={soon} seeAllTo="/events" navigate={navigate} />
       <Rail title="Recently added" events={recent} seeAllTo="/events?sort=newest" navigate={navigate} empty="No new events yet." />
+      {launches?.length > 0 && <Rail title="On the Launchpad" events={launches} seeAllTo="/launches" navigate={navigate} />}
 
       {/* Featured speakers rail (§5.2) */}
       {speakers.length > 0 && (

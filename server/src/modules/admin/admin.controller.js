@@ -32,7 +32,7 @@ export async function rejectEvent(req, res) {
 }
 
 export async function featureEvent(req, res) {
-  const event = await adminService.setEventFeatured(req.user.id, req.params.id, req.body.isFeatured);
+  const event = await adminService.updateEventAdmin(req.user.id, req.params.id, req.body);
   res.status(200).json({ event });
 }
 

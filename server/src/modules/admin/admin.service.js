@@ -133,18 +133,25 @@ function adminEventRow(e) {
     organizer: org ? { id: String(org._id), orgName: org.orgName } : null,
     rejectionReason: e.rejectionReason || null,
     isFeatured: !!e.isFeatured,
+    ownership: e.ownership || 'OBS',
     publishedAt: e.publishedAt || null,
     createdAt: e.createdAt,
   };
 }
 
-// PATCH /admin/events/:id — feature toggle (§7). Home rails surface featured events.
-export async function setEventFeatured(adminId, id, isFeatured) {
+// PATCH /admin/events/:id — feature toggle (§7) + ownership OBS/PARTNER (§5.6).
+export async function updateEventAdmin(adminId, id, { isFeatured, ownership }) {
   const event = await Event.findById(id).populate('organizerId', 'orgName').populate('categoryId', 'name');
   if (!event) throw notFoundError('EVENT_NOT_FOUND', 'Event not found');
-  event.isFeatured = !!isFeatured;
+  if (isFeatured !== undefined) {
+    event.isFeatured = !!isFeatured;
+    await writeAudit({ actorId: adminId, action: isFeatured ? 'EVENT_FEATURED' : 'EVENT_UNFEATURED', entityType: 'Event', entityId: event._id, meta: { title: event.title } });
+  }
+  if (ownership !== undefined) {
+    event.ownership = ownership;
+    await writeAudit({ actorId: adminId, action: 'EVENT_OWNERSHIP_SET', entityType: 'Event', entityId: event._id, meta: { title: event.title, ownership } });
+  }
   await event.save();
-  await writeAudit({ actorId: adminId, action: isFeatured ? 'EVENT_FEATURED' : 'EVENT_UNFEATURED', entityType: 'Event', entityId: event._id, meta: { title: event.title } });
   return adminEventRow(event);
 }
 

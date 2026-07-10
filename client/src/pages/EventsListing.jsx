@@ -48,6 +48,7 @@ export default function EventsListing() {
   const mode = params.get('mode') || '';
   const date = params.get('date') || '';
   const sort = params.get('sort') || 'soonest';
+  const owner = params.get('owner') || '';
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   useEffect(() => {
@@ -62,11 +63,12 @@ export default function EventsListing() {
     if (chapter) query.chapter = chapter;
     if (city) query.city = city;
     if (mode) query.mode = mode;
+    if (owner) query.owner = owner;
     const [from, to] = dateRange(date);
     if (from) query.dateFrom = from.toISOString();
     if (to) query.dateTo = to.toISOString();
     return query;
-  }, [q, category, chapter, city, mode, date, sort]);
+  }, [q, category, chapter, city, mode, date, sort, owner]);
 
   useEffect(() => {
     let alive = true;
@@ -169,6 +171,15 @@ export default function EventsListing() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Ownership tabs (§5.6) */}
+      <div className="mt-4 flex gap-2">
+        {[['', 'All'], ['obs', 'OBS'], ['partner', 'Partner']].map(([val, label]) => (
+          <button key={label} onClick={() => patch('owner', val)} className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition ${owner === val ? 'bg-brand text-white' : 'border border-line bg-white text-ink-soft hover:border-brand hover:text-brand'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {applied.length > 0 && (

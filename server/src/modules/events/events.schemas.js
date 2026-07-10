@@ -30,6 +30,9 @@ const eventShape = {
   // §5.5 — link an event to a 100 Days edition + day (nullable to unlink).
   programId: objectId.nullable(),
   programDayNumber: z.coerce.number().int().min(1).max(100).nullable(),
+  // §5.6 — Launchpad: organizer flags an event as a launch (+ optional countdown).
+  isLaunch: z.boolean(),
+  launchAt: z.coerce.date().nullable(),
 };
 
 const eventObject = z.object(eventShape);

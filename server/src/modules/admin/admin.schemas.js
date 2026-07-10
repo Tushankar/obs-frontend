@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ORGANIZER_STATUS, EVENT_STATUS, ROLE, USER_STATUS, GATEWAY, PAYMENT_STATUS, CHAPTER_TYPE, CHAPTER_STATUS, PAGE_STATUS } from '../../constants.js';
+import { ORGANIZER_STATUS, EVENT_STATUS, ROLE, USER_STATUS, GATEWAY, PAYMENT_STATUS, CHAPTER_TYPE, CHAPTER_STATUS, PAGE_STATUS, EVENT_OWNERSHIP } from '../../constants.js';
 
 export const listOrganizersQuery = z.object({
   status: z.enum(ORGANIZER_STATUS).optional(),
@@ -25,10 +25,11 @@ export const rejectEventSchema = z.object({
   reason: z.string().trim().min(3, 'A reason is required').max(1000),
 });
 
-// --- Event feature toggle (task 3.5) ---
+// --- Event feature toggle (task 3.5) + ownership (task 5.6) ---
 export const featureEventSchema = z.object({
-  isFeatured: z.boolean(),
-});
+  isFeatured: z.boolean().optional(),
+  ownership: z.enum(EVENT_OWNERSHIP).optional(),
+}).refine((v) => v.isFeatured !== undefined || v.ownership !== undefined, { message: 'Nothing to update' });
 
 // --- Users (task 3.5) ---
 export const listUsersQuery = z.object({
