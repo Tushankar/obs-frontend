@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
 import EvImage from '../../components/common/EvImage';
-import ArticleCard from '../../components/cards/ArticleCard';
 import { useApp } from '../../context/AppContext';
 
 export default function NewsDetail() {
@@ -160,17 +159,6 @@ export default function NewsDetail() {
           </div>
         </article>
 
-        {/* Related rail */}
-        {article.related && article.related.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-bold text-ink mb-6">Related articles</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {article.related.map((a) => (
-                <ArticleCard key={a._id} article={a} />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
