@@ -70,6 +70,9 @@ import AdminChapters from './pages/admin/Chapters';
 import AdminCms from './pages/admin/Cms';
 import AdminReports from './pages/admin/Reports';
 import AdminHero from './pages/admin/Hero';
+import AdminSpeakers from './pages/admin/Speakers';
+import AdminSponsors from './pages/admin/Sponsors';
+import AdminPartnerLeads from './pages/admin/PartnerLeads';
 import CmsPublicPage from './pages/CmsPublicPage';
 
 export default function App() {
@@ -110,10 +113,13 @@ export default function App() {
           <Route path="/admin/refunds" element={<AdminRefunds />} />
           <Route path="/admin/transactions" element={<AdminTransactions />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/partner-leads" element={<AdminPartnerLeads />} />
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/chapters" element={<AdminChapters />} />
           <Route path="/admin/cms" element={<AdminCms />} />
           <Route path="/admin/hero" element={<AdminHero />} />
+          <Route path="/admin/speakers" element={<AdminSpeakers />} />
+          <Route path="/admin/sponsors" element={<AdminSponsors />} />
           <Route path="/admin/reports" element={<AdminReports />} />
         </Route>
 
